@@ -5,6 +5,8 @@ import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 
 import TaskComments from "@/pages/tasks/components/TaskComments.vue";
+import TaskDependencies from "@/pages/tasks/components/TaskDependencies.vue";
+import TaskSubtasks from "@/pages/tasks/components/TaskSubtasks.vue";
 import TaskHistory from "@/pages/tasks/components/TaskHistory.vue";
 import TaskTagField from "@/pages/tasks/components/TaskTagField.vue";
 import { baseApi } from "@/shared/api/baseApi";
@@ -210,6 +212,14 @@ const handleDeadlineChange = (value: string | "") => {
 	deadlineAt.value = value;
 };
 
+/** Переход к подзадаче, родителю или связанной задаче в той же панели */
+const handleOpenTask = (id: string) => emit("update:taskId", id);
+
+const handleRelationsChanged = async () => {
+	emit("updated");
+	await fetchTask();
+};
+
 const findUser = (userId: string): User | undefined => memberUsers.value.find((user) => user.id === userId);
 </script>
 
@@ -338,6 +348,30 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 					</base-button>
 				</base-flex>
 
+				<button
+					v-if="task.parentTask"
+					class="task-drawer__parent"
+					type="button"
+					@click="() => handleOpenTask(task.parentTask.id)"
+				>
+					{{ translate("task.parent") }} «{{ task.parentTask.title }}»
+				</button>
+				<task-subtasks
+					v-if="taskId"
+					:task-id="taskId"
+					:project-id="task.projectId"
+					:can-create="Boolean(task.canEdit)"
+					@open="handleOpenTask"
+					@changed="handleRelationsChanged"
+				/>
+				<task-dependencies
+					v-if="taskId"
+					:task-id="taskId"
+					:project-id="task.projectId"
+					:editable="Boolean(task.canEdit)"
+					@open="handleOpenTask"
+					@changed="handleRelationsChanged"
+				/>
 				<task-history v-if="taskId" :task-id="taskId" />
 				<task-comments v-if="taskId" :task-id="taskId" />
 			</base-flex>
@@ -411,6 +445,17 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 			padding-bottom: map.get($spacers, 3);
 			border-bottom: 1px solid var(--mt-color-gray-100);
 		}
+	}
+
+	&__parent {
+		align-self: flex-start;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--mt-color-primary);
+		font: inherit;
+		font-size: map.get($font-sizes, 6);
+		cursor: pointer;
 	}
 
 	&__label {

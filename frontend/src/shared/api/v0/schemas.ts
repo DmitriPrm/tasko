@@ -167,6 +167,8 @@ export const ZTask = z.object({
 	commentsCount: z.number(),
 	subtasksCount: z.number(),
 	isStarted: z.boolean().optional(),
+	parentTask: z.object({ id: z.string(), title: z.string() }).nullable().optional(),
+	openBlockersCount: z.number().optional(),
 	canEdit: z.boolean().optional(),
 	forecast: z
 		.object({
@@ -349,3 +351,25 @@ export type TaskPriority = z.infer<typeof ZTaskPriority>;
 export type TaskType = z.infer<typeof ZTaskType>;
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
 export type TaskHistory = z.infer<typeof ZTaskHistory>;
+
+/** Короткая карточка задачи для подзадач и связей */
+export const ZBriefTask = z.object({
+	id: z.string(),
+	title: z.string(),
+	status: ZTaskStatus,
+	isCompleted: z.boolean(),
+	deadlineAt: z.string().nullable(),
+	assignee: ZUser.nullable(),
+});
+
+const ZDependencyItem = z.object({ dependencyId: z.string(), task: ZBriefTask });
+
+export const ZTaskDependencies = z.object({
+	blockedBy: z.array(ZDependencyItem),
+	blocks: z.array(ZDependencyItem),
+	related: z.array(ZDependencyItem),
+});
+
+export type BriefTask = z.infer<typeof ZBriefTask>;
+export type TaskDependencies = z.infer<typeof ZTaskDependencies>;
+export type DependencyKind = "DEPENDS_ON" | "BLOCKS" | "RELATED";

@@ -11,6 +11,8 @@ type TaskWithRelations = Task & {
 	project?: Pick<Project, "id" | "name" | "status">;
 	tags?: { tag: Tag }[];
 	coAssignees?: { user: User }[];
+	parentTask?: { id: string; title: string } | null;
+	dependenciesIn?: { id: string }[];
 	_count?: { comments: number; subtasks: number };
 };
 
@@ -42,6 +44,8 @@ export function toTaskDto(task: TaskWithRelations) {
 		commentsCount: task._count?.comments ?? 0,
 		subtasksCount: task._count?.subtasks ?? 0,
 		isStarted: isTaskStarted(task),
+		parentTask: task.parentTask ? { id: task.parentTask.id, title: task.parentTask.title } : null,
+		openBlockersCount: task.dependenciesIn?.length ?? 0,
 		forecast: buildForecast(task),
 	};
 }

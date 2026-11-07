@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
+import { DependencyType, Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
 import { AuthUser } from "../auth/auth.types";
@@ -23,6 +23,15 @@ const taskInclude = {
 	project: { select: { id: true, name: true, status: true } },
 	tags: { include: { tag: true } },
 	coAssignees: { include: { user: true } },
+	parentTask: { select: { id: true, title: true } },
+	// Незакрытые задачи, которые блокируют эту: по ним карточка показывает замок
+	dependenciesIn: {
+		where: {
+			type: DependencyType.BLOCKS,
+			source: { status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }, isCompleted: false },
+		},
+		select: { id: true },
+	},
 	_count: { select: { comments: true, subtasks: true } },
 } satisfies Prisma.TaskInclude;
 
@@ -406,6 +415,21 @@ export class TasksService {
 				},
 			})),
 		};
+	}
+
+	/** Задача, которую пользователь может смотреть (для связей, подзадач, вложений) */
+	async getViewableTask(user: AuthUser, taskId: string) {
+		const task = await this.getTaskOrThrow(taskId);
+		await this.projectAccess.assertCanView(task.projectId, user);
+		return task;
+	}
+
+	/** Задача, которую пользователь может менять: те же права, что на редактирование полей */
+	async getEditableTask(user: AuthUser, taskId: string) {
+		await this.access.assert(user, "TASKS_EDIT");
+		const task = await this.getTaskOrThrow(taskId);
+		await this.assertCanEdit(user, task.projectId, task.authorId);
+		return task;
 	}
 
 	/** Колонка для новой/перенесённой задачи: указанная или первая «К выполнению» */
