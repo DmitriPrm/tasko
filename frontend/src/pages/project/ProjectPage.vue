@@ -265,7 +265,7 @@ useOnTaskChange({ reload: () => handleReload() });
 				</base-button>
 			</base-flex>
 		</template>
-		<el-tabs class="project-page__tabs" v-model="activeTab">
+		<el-tabs v-model="activeTab" class="project-page__tabs">
 			<el-tab-pane :label="translate('project.tasks')" name="tasks">
 				<project-tasks-toolbar
 					:search="search"

@@ -14,7 +14,7 @@ const localeStore = useLocaleStore();
 const search = ref("");
 
 const categories = computed(() => {
-	localeStore.locale;
+	void localeStore.locale; // пересчитать при смене языка
 	const query = search.value.trim().toLowerCase();
 	return SETTINGS_CATEGORIES.filter((item) => authStore.hasPermission(item.permission))
 		.filter((item) => !query || item.names.some((name) => name.toLowerCase().includes(query)))

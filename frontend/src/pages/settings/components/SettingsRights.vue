@@ -6,7 +6,7 @@ import type { PermissionMatrix, SystemRole } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { roleLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
-import { Search } from "@/shared/ui/icon/icons";
+import { Search as SearchIcon } from "@/shared/ui/icon/icons";
 
 type Grants = Record<string, Record<string, boolean>>;
 
@@ -126,7 +126,7 @@ const handleSave = async () => {
 				:placeholder="translate('settings.searchRights')"
 			>
 				<template #prefix>
-					<el-icon :size="16"><search /></el-icon>
+					<el-icon :size="16"><search-icon /></el-icon>
 				</template>
 			</el-input>
 			<p class="settings-rights__hint">{{ translate("settings.rightsHint") }}</p>

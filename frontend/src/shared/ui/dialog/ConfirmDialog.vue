@@ -8,7 +8,7 @@ const emit = defineEmits<{
 	cancel: [];
 }>();
 
-const props = defineProps<{
+defineProps<{
 	title?: string;
 	text?: string;
 }>();

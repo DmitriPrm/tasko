@@ -92,9 +92,9 @@ const handleLogout = async () => {
 			<template v-else-if="!authStore.isAuthenticated">
 				<base-flex class="auth-shell__form" direction="column" :gap="3">
 					<router-link
+						v-slot="{ navigate }"
 						:to="{ name: invitation.userExists ? 'sign-in' : 'register', query: { redirect } }"
 						custom
-						v-slot="{ navigate }"
 					>
 						<base-button class="auth-shell__submit" type="primary" @click="navigate">
 							{{ invitation.userExists ? translate("invitation.signIn") : translate("invitation.register") }}

@@ -15,7 +15,7 @@ const localeStore = useLocaleStore();
 const category = computed(() => SETTINGS_CATEGORIES.find((item) => item.routeName === route.name));
 
 const title = computed(() => {
-	localeStore.locale;
+	void localeStore.locale; // пересчитать при смене языка
 	return category.value ? translate(category.value.titleKey) : translate("settings.title");
 });
 </script>

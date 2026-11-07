@@ -21,7 +21,7 @@ const emit = defineEmits<{
 	"update:priority": [value: TaskPriority | ""];
 }>();
 
-const props = defineProps<{
+defineProps<{
 	search: string;
 	view: TasksView;
 	assigneeId: string;
