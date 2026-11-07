@@ -1,0 +1,28 @@
+@use "sass:map";
+
+$spacer: 1rem;
+
+$spacers: (
+	0: 0,
+	1: $spacer * 0.25,
+	2: $spacer * 0.5,
+	3: $spacer * 0.75,
+	4: $spacer * 1,
+	5: $spacer * 1.25,
+	6: $spacer * 1.5,
+	8: $spacer * 2,
+	10: $spacer * 2.5,
+	12: $spacer * 3,
+	16: $spacer * 4,
+);
+
+$font-sizes: (
+	1: 1.75rem,
+	2: 1.5rem,
+	3: 1.25rem,
+	4: 1.125rem,
+	5: 1rem,
+	6: 0.875rem,
+	7: 0.8125rem,
+	8: 0.75rem,
+);

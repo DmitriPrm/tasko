@@ -1,0 +1,25 @@
+---
+description: Vue frontend conventions
+globs: frontend/**/*.{vue,ts,scss}
+alwaysApply: false
+---
+
+# Vue
+
+- Импорты строго от корня: `@/...`
+- Порядок в script: emits, props, refs, computeds, functions, watchers, provide, defineExpose
+- Boolean-пропсы всегда необязательные (`?:`)
+- Эмиты через обёртки: `const handleSmth = (...args) => emit("smth", ...args)`
+- Обработчики: `@click="handleSmth"` или `@click="(arg) => handleSmth(arg)"`
+- Запросы к API только через `useFetch` или прямой вызов ручки `baseApi.*` (без try/catch вокруг axios)
+- Composables принимают один объект параметров
+- Flex только через `BaseFlex`, не через CSS `display: flex`
+- Стили: БЭМ, `var(--mt-...)`, `map.get($spacers, N)`, `map.get($font-sizes, N)`
+- Не использовать `line-height`
+- Переводы с заглавной буквы
+- Компоненты раскладывать по папкам фичи (`components/`, `lib/`)
+- Один и тот же элемент выглядит одинаково на всех экранах. Новый вариант не придумывать, если уже есть `Base*`
+- Кнопки модалок и форм: слева внизу, сначала основное действие, справа отмена
+- В таблицах и карточках действия — иконки (`BaseIconButton`): карандаш, корзина. Подпись только в `aria-label`
+- Клик по человеку ведёт в его профиль через `BaseUserName`. В селекте и в контроле смены исполнителя ссылку выключать (`link` = false)
+- Сортировка таблиц — кликом по заголовку `BaseTable`, отдельную сортировку рядом не дублировать

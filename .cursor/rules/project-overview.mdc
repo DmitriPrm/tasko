@@ -1,0 +1,14 @@
+---
+description: TASKO project overview and MVP boundaries
+alwaysApply: true
+---
+
+# TASKO
+
+Система управления проектами. Стек: Vue 3 + NestJS + Prisma + PostgreSQL.
+
+MVP без ML: auth, пользователи, проекты, участники, задачи, workflow, комментарии, уведомления, аналитика.
+
+Не делать без явной просьбы: ML, вложения, зависимости задач, Gantt, email, микросервисы.
+
+Папки: `frontend/` и `backend/`. Импорты на фронте только от `@/...`.

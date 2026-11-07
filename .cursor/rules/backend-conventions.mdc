@@ -1,0 +1,15 @@
+---
+description: NestJS backend conventions
+globs: backend/**/*.ts
+alwaysApply: false
+---
+
+# Backend
+
+- Бизнес-логика и права только на сервере
+- Ответ всегда `{ data: T }`, ошибки `{ error: { message, code } }` без stack trace
+- Проектные права проверять в сервисах, не полагаться на скрытые кнопки Vue
+- Исполнитель задачи — только активный участник проекта
+- Workflow: TODO → IN_PROGRESS → REVIEW → DONE, плюс CANCELLED
+- Первый IN_PROGRESS фиксирует `actualStartAt`, DONE фиксирует `completedAt`
+- Новый модуль: controller + service + dto, без логики в контроллере

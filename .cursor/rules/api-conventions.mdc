@@ -1,0 +1,25 @@
+---
+description: Frontend API handles and useFetch
+globs: frontend/src/**/*.{ts,vue}
+alwaysApply: false
+---
+
+# API
+
+Ручки создаются через `createGet/Post/Patch/Put/Delete` и вызываются так:
+
+```ts
+fn(pathParams, queryParams, payload, signal)
+baseApi.tasks.getTask({ id }, undefined, undefined, signal)
+```
+
+Схема ответа — Zod + `ZWrapDTO`. Типы выводятся из схем.
+
+`useFetch` для чтения списков и карточек:
+
+```ts
+useFetch(baseApi.projects.getProjects, "data.items", { immediate: true, params })
+```
+
+Мутации в обработчиках — прямой вызов ручки, затем `fetch()` инстанса.
+Не писать `try/catch` вокруг API, если можно использовать `useFetch`.

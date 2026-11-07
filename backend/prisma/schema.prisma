@@ -1,0 +1,410 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  ADMIN
+  MANAGER
+  EXECUTOR
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum ProjectRole {
+  MANAGER
+  MEMBER
+}
+
+enum TaskType {
+  TASK
+  FEATURE
+  BUG
+  RESEARCH
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+  CANCELLED
+}
+
+enum NotificationType {
+	TASK_ASSIGNED
+	DEADLINE_CHANGED
+	STATUS_CHANGED
+	DEADLINE_APPROACHING
+	PROJECT_INVITATION
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum ProfileFieldType {
+	TEXT
+	TEXTAREA
+	NUMBER
+	DATE
+	CHECKBOX
+	SELECT
+	MULTI_SELECT
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  fullName     String     @map("full_name")
+  avatarFile   String?    @map("avatar_file")
+  systemRole   SystemRole @default(EXECUTOR) @map("system_role")
+  isActive     Boolean    @default(true) @map("is_active")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  ownedProjects      Project[]            @relation("ProjectOwner")
+  memberships        ProjectMember[]
+  authoredTasks      Task[]               @relation("TaskAuthor")
+  assignedTasks      Task[]               @relation("TaskAssignee")
+  coAssignedTasks    TaskCoAssignee[]
+  favorites          ProjectFavorite[]
+  statusChanges      TaskStatusHistory[]
+  fieldChanges       TaskChangeHistory[]
+	comments           Comment[]
+	notifications      Notification[]
+	permissions        UserPermission[]
+	profileSections    ProfileSection[]
+	tableLayouts       UserTableLayout[]
+	emailTokens        EmailVerificationToken[]
+	sentInvitations    ProjectInvitation[]  @relation("InvitationInviter")
+	receivedInvitations ProjectInvitation[] @relation("InvitationInvitee")
+
+	@@map("users")
+}
+
+model Project {
+  id             String        @id @default(uuid())
+  name           String
+  description    String?
+  status         ProjectStatus @default(PLANNED)
+  ownerId        String        @map("owner_id")
+  plannedStartAt DateTime?     @map("planned_start_at")
+  plannedEndAt   DateTime?     @map("planned_end_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  owner     User              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members   ProjectMember[]
+  tasks     Task[]
+  favorites ProjectFavorite[]
+  tags      Tag[]
+  invitations ProjectInvitation[]
+  columns   ProjectColumn[]
+
+  @@map("projects")
+}
+
+/// Колонка доски проекта. status - смысловая категория (для аналитики и прогноза)
+model ProjectColumn {
+  id        String     @id @default(uuid())
+  projectId String     @map("project_id")
+  name      String
+  color     String     @default("#2563EB")
+  status    TaskStatus @default(TODO)
+  position  Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId, position])
+  @@map("project_columns")
+}
+
+model ProjectFavorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("project_favorites")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  name      String
+  color     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   TaskTag[]
+
+  @@unique([projectId, name])
+  @@map("tags")
+}
+
+model ProjectMember {
+  id          String      @id @default(uuid())
+  projectId   String      @map("project_id")
+  userId      String      @map("user_id")
+  projectRole ProjectRole @map("project_role")
+  joinedAt    DateTime    @default(now()) @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  projectId      String       @map("project_id")
+  authorId       String       @map("author_id")
+  assigneeId     String?      @map("assignee_id")
+  parentTaskId   String?      @map("parent_task_id")
+  columnId       String?      @map("column_id")
+  title          String
+  description    String?
+  type           TaskType     @default(TASK)
+  priority       TaskPriority @default(MEDIUM)
+  status         TaskStatus   @default(TODO)
+  plannedStartAt DateTime?    @map("planned_start_at")
+  deadlineAt     DateTime?    @map("deadline_at")
+  actualStartAt  DateTime?    @map("actual_start_at")
+  completedAt    DateTime?    @map("completed_at")
+  isCompleted    Boolean      @default(false) @map("is_completed")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author         User                @relation("TaskAuthor", fields: [authorId], references: [id])
+  assignee       User?               @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  column         ProjectColumn?      @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  parentTask     Task?               @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks       Task[]              @relation("TaskSubtasks")
+  tags           TaskTag[]
+  coAssignees    TaskCoAssignee[]
+  statusHistory  TaskStatusHistory[]
+  changeHistory  TaskChangeHistory[]
+  comments       Comment[]
+  notifications  Notification[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([columnId])
+  @@map("tasks")
+}
+
+model TaskTag {
+  taskId String @map("task_id")
+  tagId  String @map("tag_id")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@map("task_tags")
+}
+
+model TaskCoAssignee {
+  taskId String @map("task_id")
+  userId String @map("user_id")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_co_assignees")
+}
+
+model TaskStatusHistory {
+  id        String     @id @default(uuid())
+  taskId    String     @map("task_id")
+  fromStatus TaskStatus? @map("from_status")
+  toStatus  TaskStatus @map("to_status")
+  changedBy String     @map("changed_by")
+  changedAt DateTime   @default(now()) @map("changed_at")
+  comment   String?
+
+  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor   User @relation(fields: [changedBy], references: [id])
+
+  @@map("task_status_history")
+}
+
+model TaskChangeHistory {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  fieldName String   @map("field_name")
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  changedBy String   @map("changed_by")
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  task  Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [changedBy], references: [id])
+
+  @@map("task_change_history")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  authorId  String   @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("comments")
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  type          NotificationType
+  title         String
+  body          String
+  relatedTaskId String?          @map("related_task_id")
+  isRead        Boolean          @default(false) @map("is_read")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [relatedTaskId], references: [id], onDelete: SetNull)
+
+	@@index([userId, isRead])
+	@@map("notifications")
+}
+
+model RolePermission {
+	role    SystemRole
+	code    String
+	enabled Boolean    @default(true)
+
+	@@id([role, code])
+	@@map("role_permissions")
+}
+
+model UserPermission {
+	userId  String  @map("user_id")
+	code    String
+	enabled Boolean
+
+	user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+	@@id([userId, code])
+	@@map("user_permissions")
+}
+
+/// Раздел профиля, который пользователь создаёт сам
+model ProfileSection {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fields ProfileCustomField[]
+
+  @@index([userId, position])
+  @@map("profile_sections")
+}
+
+/// Поле внутри раздела профиля: значение хранится в самом поле
+model ProfileCustomField {
+  id        String           @id @default(uuid())
+  sectionId String           @map("section_id")
+  name      String
+  type      ProfileFieldType @default(TEXT)
+  options   String[]         @default([])
+  value     String           @default("")
+  position  Int              @default(0)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  section ProfileSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, position])
+  @@map("profile_custom_fields")
+}
+
+model UserTableLayout {
+	id        String   @id @default(uuid())
+	userId    String   @map("user_id")
+	code      String
+	widths    Json
+	createdAt DateTime @default(now()) @map("created_at")
+	updatedAt DateTime @updatedAt @map("updated_at")
+
+	user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+	@@unique([userId, code])
+	@@map("user_table_layouts")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model ProjectInvitation {
+  id          String           @id @default(uuid())
+  projectId   String           @map("project_id")
+  email       String
+  projectRole ProjectRole      @map("project_role")
+  tokenHash   String           @unique @map("token_hash")
+  status      InvitationStatus @default(PENDING)
+  invitedById String           @map("invited_by_id")
+  inviteeId   String?          @map("invitee_id")
+  expiresAt   DateTime         @map("expires_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  respondedAt DateTime?        @map("responded_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitee   User? @relation("InvitationInvitee", fields: [inviteeId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, status])
+  @@index([email, status])
+  @@map("project_invitations")
+}
