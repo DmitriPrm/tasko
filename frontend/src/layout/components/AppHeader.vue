@@ -17,11 +17,9 @@ const authStore = useAuthStore();
 const layoutStore = useLayoutStore();
 const taskDrawer = useTaskDrawerStore();
 
-const { state: notifications, fetch: fetchNotifications } = useFetch(
-	baseApi.notifications.getNotifications,
-	"data",
-	{ immediate: true },
-);
+const { state: notifications, fetch: fetchNotifications } = useFetch(baseApi.notifications.getNotifications, "data", {
+	immediate: true,
+});
 
 const { state: unread, fetch: fetchUnread } = useFetch(baseApi.notifications.getUnreadCount, "data", {
 	immediate: true,
@@ -66,12 +64,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
 
 <template>
 	<header class="app-header">
-		<base-flex
-			align="center"
-			:justify="layoutStore.isMobile ? 'space-between' : 'flex-end'"
-			:gap="4"
-			width="full"
-		>
+		<base-flex align="center" :justify="layoutStore.isMobile ? 'space-between' : 'flex-end'" :gap="4" width="full">
 			<base-button
 				v-if="layoutStore.isMobile"
 				class="app-header__menu"
@@ -85,11 +78,11 @@ onBeforeUnmount(() => window.clearInterval(timer));
 			</base-button>
 			<base-flex class="app-header__controls" align="center" :gap="3">
 				<el-popover
-						placement="bottom-end"
-						:width="layoutStore.isMobile ? 280 : 380"
-						trigger="click"
-						@before-enter="handleRefresh"
-					>
+					placement="bottom-end"
+					:width="layoutStore.isMobile ? 280 : 380"
+					trigger="click"
+					@before-enter="handleRefresh"
+				>
 					<template #reference>
 						<el-badge :value="unread?.count || 0" :hidden="!unread?.count">
 							<base-button class="app-header__bell" text :aria-label="translate('nav.notifications')">

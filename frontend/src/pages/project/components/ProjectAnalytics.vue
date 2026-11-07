@@ -40,7 +40,6 @@ const workloadColumns = computed(() => [
 	{ key: "fullName", label: translate("users.fullName") },
 	{ key: "activeTasks", label: translate("project.tasks") },
 ]);
-
 </script>
 
 <template>

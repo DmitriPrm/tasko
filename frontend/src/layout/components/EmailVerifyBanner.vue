@@ -32,7 +32,9 @@ const handleResend = async () => {
 
 <template>
 	<div v-if="authStore.user && !authStore.isEmailVerified" class="email-verify-banner" role="status">
-		<span>{{ translate("auth.verifyBanner") }} <strong>{{ authStore.user.email }}</strong></span>
+		<span
+			>{{ translate("auth.verifyBanner") }} <strong>{{ authStore.user.email }}</strong></span
+		>
 		<base-button size="small" :loading="isSending" :disabled="isSent" @click="handleResend">
 			{{ isSent ? translate("auth.verificationResent") : translate("auth.resend") }}
 		</base-button>

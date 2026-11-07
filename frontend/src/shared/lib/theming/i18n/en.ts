@@ -123,7 +123,8 @@ export const en = {
 		noDescription: "No description",
 		delete: "Delete project",
 		deleteTitle: "Delete the project?",
-		deleteText: "The project will be deleted along with its tasks, columns, comments and members. This cannot be undone.",
+		deleteText:
+			"The project will be deleted along with its tasks, columns, comments and members. This cannot be undone.",
 		emptyHint: "Create a project or ask a teammate to invite you",
 		title: "Projects",
 		create: "New project",

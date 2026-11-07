@@ -139,8 +139,7 @@ const handleSort = (column: BaseTableColumn) => {
 	page.value = 1;
 };
 
-const clampWidth = (width: number) =>
-	Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)));
+const clampWidth = (width: number) => Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)));
 
 const normalizeWidths = (value: Record<string, number> | undefined) => {
 	const next: Record<string, number> = {};
@@ -282,11 +281,7 @@ watch(layoutState, (layout) => {
 					<tr v-if="!loading && !visibleRows.length">
 						<td class="base-table__empty" :colspan="columns.length">{{ translate("common.empty") }}</td>
 					</tr>
-					<tr
-						v-for="row in visibleRows"
-						:key="String(row[rowKey])"
-						@click="() => handleRowClick(row)"
-					>
+					<tr v-for="row in visibleRows" :key="String(row[rowKey])" @click="() => handleRowClick(row)">
 						<td v-for="column in columns" :key="column.key">
 							<slot :name="column.key" :row="row">{{ row[column.key] ?? "—" }}</slot>
 						</td>
@@ -304,12 +299,7 @@ watch(layoutState, (layout) => {
 						:model-value="selectedPageSize"
 						@change="(size: number) => handlePageSize(size)"
 					>
-						<el-option
-							v-for="size in pageSizeOptions"
-							:key="size"
-							:label="String(size)"
-							:value="size"
-						/>
+						<el-option v-for="size in pageSizeOptions" :key="size" :label="String(size)" :value="size" />
 					</el-select>
 				</base-flex>
 			</base-flex>

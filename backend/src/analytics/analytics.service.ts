@@ -45,10 +45,7 @@ export class AnalyticsService {
 
 		const durations = completed
 			.filter((task) => task.actualStartAt && task.completedAt)
-			.map(
-				(task) =>
-					(task.completedAt!.getTime() - task.actualStartAt!.getTime()) / (1000 * 60 * 60),
-			)
+			.map((task) => (task.completedAt!.getTime() - task.actualStartAt!.getTime()) / (1000 * 60 * 60))
 			.sort((a, b) => a - b);
 
 		const averageDurationHours = durations.length

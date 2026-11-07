@@ -37,9 +37,7 @@ export function toTaskDto(task: TaskWithRelations) {
 		assignee: task.assignee ? toUserDto(task.assignee) : null,
 		coAssignees: task.coAssignees?.map((item) => toUserDto(item.user)) ?? [],
 		tags: task.tags?.map((item) => toTagDto(item.tag)) ?? [],
-		project: task.project
-			? { id: task.project.id, name: task.project.name, status: task.project.status }
-			: undefined,
+		project: task.project ? { id: task.project.id, name: task.project.name, status: task.project.status } : undefined,
 		commentsCount: task._count?.comments ?? 0,
 		subtasksCount: task._count?.subtasks ?? 0,
 		forecast: buildForecast(task),

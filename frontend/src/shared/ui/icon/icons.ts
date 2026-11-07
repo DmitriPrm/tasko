@@ -35,10 +35,7 @@ const c = (cx: number, cy: number, r: number, extra: Record<string, string | num
 	"circle",
 	{ cx, cy, r, ...extra },
 ];
-const r = (x: number, y: number, width: number, height: number, rx = 2): Shape => [
-	"rect",
-	{ x, y, width, height, rx },
-];
+const r = (x: number, y: number, width: number, height: number, rx = 2): Shape => ["rect", { x, y, width, height, rx }];
 
 const STAR = "M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.2l-5.6 3 1.1-6.2L3 9.6l6.2-.9z";
 const USER_BODY = "M4 21c0-4 3.6-7 8-7s8 3 8 7";
@@ -57,17 +54,24 @@ export const List = createIcon("List", [
 	p("M3.5 12h.01"),
 	p("M3.5 18h.01"),
 ]);
-export const Board = createIcon("Board", [r(3, 4, 18, 16, 3), p("M9 4v16"), p("M15 4v16"), p("M6 8h.01"), p("M12 8h.01")]);
+export const Board = createIcon("Board", [
+	r(3, 4, 18, 16, 3),
+	p("M9 4v16"),
+	p("M15 4v16"),
+	p("M6 8h.01"),
+	p("M12 8h.01"),
+]);
 export const Grid = createIcon("Grid", [r(3, 3, 7, 9, 2), r(14, 3, 7, 5, 2), r(14, 12, 7, 9, 2), r(3, 16, 7, 5, 2)]);
 export const PieChart = createIcon("PieChart", [p("M21 12a9 9 0 1 1-9-9v9z"), p("M15.5 3.4A9 9 0 0 1 20.6 8.5H15.5z")]);
 export const Folder = createIcon("Folder", [
 	p("M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"),
 ]);
 export const CircleCheck = createIcon("CircleCheck", [c(12, 12, 9), p("M8 12.5l3 3 5-6")]);
-export const CircleCheckFilled = createIcon("CircleCheckFilled", [
-	c(12, 12, 10),
-	["path", { d: "M7.8 12.5l3 3 5.4-6.2", stroke: "#fff", "stroke-width": 2, fill: "none" }],
-], true);
+export const CircleCheckFilled = createIcon(
+	"CircleCheckFilled",
+	[c(12, 12, 10), ["path", { d: "M7.8 12.5l3 3 5.4-6.2", stroke: "#fff", "stroke-width": 2, fill: "none" }]],
+	true,
+);
 export const Setting = createIcon("Setting", [
 	p("M4 7h10"),
 	p("M18 7h2"),
@@ -77,7 +81,11 @@ export const Setting = createIcon("Setting", [
 	c(8, 17, 2),
 ]);
 export const User = createIcon("User", [c(12, 8, 4), p(USER_BODY)]);
-export const UserFilled = createIcon("UserFilled", [c(12, 8, 4.5), p("M3.5 21c0-4.2 3.8-7 8.5-7s8.5 2.8 8.5 7z")], true);
+export const UserFilled = createIcon(
+	"UserFilled",
+	[c(12, 8, 4.5), p("M3.5 21c0-4.2 3.8-7 8.5-7s8.5 2.8 8.5 7z")],
+	true,
+);
 export const Star = createIcon("Star", [p(STAR)]);
 export const StarFilled = createIcon("StarFilled", [p(STAR)], true);
 export const Bell = createIcon("Bell", [p("M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"), p("M10.3 21a2 2 0 0 0 3.4 0")]);

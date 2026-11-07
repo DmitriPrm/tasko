@@ -3,14 +3,7 @@ import { computed } from "vue";
 
 type FlexDirection = "row" | "row-reverse" | "column" | "column-reverse";
 type FlexAlign = "stretch" | "center" | "flex-start" | "flex-end" | "baseline";
-type FlexJustify =
-	| "flex-start"
-	| "flex-end"
-	| "center"
-	| "stretch"
-	| "space-between"
-	| "space-around"
-	| "space-evenly";
+type FlexJustify = "flex-start" | "flex-end" | "center" | "stretch" | "space-between" | "space-around" | "space-evenly";
 type FlexWrap = "nowrap" | "wrap" | "wrap-reverse";
 
 interface FlexProps {

@@ -109,12 +109,16 @@ body.is-dragging * {
 	&--primary:not(.is-text):not(.is-plain) {
 		border-color: transparent;
 		background: var(--mt-gradient-brand);
-		box-shadow: 0 1px 2px rgba(79, 86, 232, 0.35), 0 6px 14px -6px rgba(79, 86, 232, 0.55);
+		box-shadow:
+			0 1px 2px rgba(79, 86, 232, 0.35),
+			0 6px 14px -6px rgba(79, 86, 232, 0.55);
 
 		&:hover,
 		&:focus {
 			filter: brightness(1.06);
-			box-shadow: 0 1px 2px rgba(79, 86, 232, 0.4), 0 10px 20px -8px rgba(79, 86, 232, 0.65);
+			box-shadow:
+				0 1px 2px rgba(79, 86, 232, 0.4),
+				0 10px 20px -8px rgba(79, 86, 232, 0.65);
 		}
 
 		&.is-disabled,
@@ -265,7 +269,12 @@ body.is-dragging * {
 }
 
 .el-skeleton__item {
-	background: linear-gradient(90deg, var(--mt-color-gray-100) 25%, var(--mt-color-gray-50) 37%, var(--mt-color-gray-100) 63%);
+	background: linear-gradient(
+		90deg,
+		var(--mt-color-gray-100) 25%,
+		var(--mt-color-gray-50) 37%,
+		var(--mt-color-gray-100) 63%
+	);
 	background-size: 400% 100%;
 }
 

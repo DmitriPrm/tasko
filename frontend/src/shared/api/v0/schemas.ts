@@ -29,15 +29,7 @@ export const ZUser = z.object({
 	permissions: z.array(z.string()).optional(),
 });
 
-export const ZProfileFieldType = z.enum([
-	"TEXT",
-	"TEXTAREA",
-	"NUMBER",
-	"DATE",
-	"CHECKBOX",
-	"SELECT",
-	"MULTI_SELECT",
-]);
+export const ZProfileFieldType = z.enum(["TEXT", "TEXTAREA", "NUMBER", "DATE", "CHECKBOX", "SELECT", "MULTI_SELECT"]);
 
 export const ZProfileField = z.object({
 	id: z.string(),

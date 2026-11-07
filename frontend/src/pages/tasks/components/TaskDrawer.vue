@@ -85,12 +85,8 @@ const { fetch: transitionTask } = useFetch(baseApi.tasks.transitionTask, "data",
 	resetOnFetch: false,
 });
 
-const memberUsers = computed(() =>
-	((project.value?.members || []) as ProjectMember[]).map((member) => member.user),
-);
-const availableCoAssignees = computed(() =>
-	memberUsers.value.filter((user) => user.id !== assigneeId.value),
-);
+const memberUsers = computed(() => ((project.value?.members || []) as ProjectMember[]).map((member) => member.user));
+const availableCoAssignees = computed(() => memberUsers.value.filter((user) => user.id !== assigneeId.value));
 const projectTags = computed(() => (tagsState.value || []) as Tag[]);
 const availableTransitions = computed(() => {
 	const status = task.value?.status as TaskStatus | undefined;
@@ -210,11 +206,7 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 		<template #header>
 			<base-flex class="task-drawer__heading" align="flex-start" :gap="2">
 				<button class="task-drawer__check-btn" type="button" @click="handleToggleCompleted">
-					<el-icon
-						class="task-drawer__check"
-						:class="{ 'task-drawer__check--done': isCompleted }"
-						:size="20"
-					>
+					<el-icon class="task-drawer__check" :class="{ 'task-drawer__check--done': isCompleted }" :size="20">
 						<circle-check-filled v-if="isCompleted" />
 						<circle-check v-else />
 					</el-icon>

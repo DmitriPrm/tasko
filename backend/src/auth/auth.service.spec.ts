@@ -191,9 +191,7 @@ describe("AuthService", () => {
 		prisma.user.findUnique.mockResolvedValue(user);
 		(bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-		await expect(service.login({ email: user.email, password: "bad" })).rejects.toBeInstanceOf(
-			UnauthorizedException,
-		);
+		await expect(service.login({ email: user.email, password: "bad" })).rejects.toBeInstanceOf(UnauthorizedException);
 	});
 
 	it("rejects a blocked user", async () => {

@@ -28,11 +28,7 @@ export class ProfileSectionsController {
 	}
 
 	@Delete("sections/:sectionId")
-	removeSection(
-		@CurrentUser() user: AuthUser,
-		@Param("userId") userId: string,
-		@Param("sectionId") sectionId: string,
-	) {
+	removeSection(@CurrentUser() user: AuthUser, @Param("userId") userId: string, @Param("sectionId") sectionId: string) {
 		return this.sections.removeSection(user, userId, sectionId);
 	}
 
@@ -57,11 +53,7 @@ export class ProfileSectionsController {
 	}
 
 	@Delete("fields/:fieldId")
-	removeField(
-		@CurrentUser() user: AuthUser,
-		@Param("userId") userId: string,
-		@Param("fieldId") fieldId: string,
-	) {
+	removeField(@CurrentUser() user: AuthUser, @Param("userId") userId: string, @Param("fieldId") fieldId: string) {
 		return this.sections.removeField(user, userId, fieldId);
 	}
 }

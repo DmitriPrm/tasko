@@ -24,19 +24,17 @@ const multiValue = computed(() => {
 });
 
 const handleText = (value: string) => emit("update:modelValue", value);
-const handleNumber = (value: number | null | undefined) => emit("update:modelValue", value == null ? "" : String(value));
+const handleNumber = (value: number | null | undefined) =>
+	emit("update:modelValue", value == null ? "" : String(value));
 const handleDate = (value: string) => emit("update:modelValue", value || "");
-const handleCheck = (value: string | number | boolean) => emit("update:modelValue", value === true || value === "true" ? "true" : "false");
+const handleCheck = (value: string | number | boolean) =>
+	emit("update:modelValue", value === true || value === "true" ? "true" : "false");
 const handleSelect = (value: string) => emit("update:modelValue", value || "");
 const handleMulti = (value: string[]) => emit("update:modelValue", JSON.stringify(value));
 </script>
 
 <template>
-	<el-input
-		v-if="type === 'TEXT'"
-		:model-value="modelValue"
-		@update:model-value="handleText"
-	/>
+	<el-input v-if="type === 'TEXT'" :model-value="modelValue" @update:model-value="handleText" />
 	<el-input
 		v-else-if="type === 'TEXTAREA'"
 		type="textarea"
@@ -57,25 +55,11 @@ const handleMulti = (value: string[]) => emit("update:modelValue", JSON.stringif
 		:model-value="modelValue || undefined"
 		@update:model-value="handleDate"
 	/>
-	<el-checkbox
-		v-else-if="type === 'CHECKBOX'"
-		:model-value="modelValue === 'true'"
-		@change="handleCheck"
-	/>
-	<el-select
-		v-else-if="type === 'SELECT'"
-		clearable
-		:model-value="modelValue || undefined"
-		@change="handleSelect"
-	>
+	<el-checkbox v-else-if="type === 'CHECKBOX'" :model-value="modelValue === 'true'" @change="handleCheck" />
+	<el-select v-else-if="type === 'SELECT'" clearable :model-value="modelValue || undefined" @change="handleSelect">
 		<el-option v-for="option in options" :key="option" :label="option" :value="option" />
 	</el-select>
-	<el-select
-		v-else
-		multiple
-		:model-value="multiValue"
-		@change="handleMulti"
-	>
+	<el-select v-else multiple :model-value="multiValue" @change="handleMulti">
 		<el-option v-for="option in options" :key="option" :label="option" :value="option" />
 	</el-select>
 </template>

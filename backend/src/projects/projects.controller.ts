@@ -134,11 +134,7 @@ export class ProjectsController {
 	}
 
 	@Delete(":id/members/:userId")
-	removeMember(
-		@CurrentUser() user: AuthUser,
-		@Param("id") id: string,
-		@Param("userId") userId: string,
-	) {
+	removeMember(@CurrentUser() user: AuthUser, @Param("id") id: string, @Param("userId") userId: string) {
 		return this.projectsService.removeMember(user, id, userId);
 	}
 }

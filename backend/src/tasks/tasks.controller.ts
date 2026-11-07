@@ -21,11 +21,7 @@ export class TasksController {
 	}
 
 	@Get("projects/:id/tasks")
-	listByProject(
-		@CurrentUser() user: AuthUser,
-		@Param("id") projectId: string,
-		@Query() query: TasksQueryDto,
-	) {
+	listByProject(@CurrentUser() user: AuthUser, @Param("id") projectId: string, @Query() query: TasksQueryDto) {
 		return this.tasksService.listByProject(user, projectId, query);
 	}
 
@@ -35,11 +31,7 @@ export class TasksController {
 	}
 
 	@Post("projects/:id/tasks")
-	create(
-		@CurrentUser() user: AuthUser,
-		@Param("id") projectId: string,
-		@Body() dto: CreateTaskDto,
-	) {
+	create(@CurrentUser() user: AuthUser, @Param("id") projectId: string, @Body() dto: CreateTaskDto) {
 		return this.tasksService.create(user, projectId, dto);
 	}
 
@@ -64,11 +56,7 @@ export class TasksController {
 	}
 
 	@Post("tasks/:id/transitions")
-	transition(
-		@CurrentUser() user: AuthUser,
-		@Param("id") id: string,
-		@Body() dto: TransitionTaskDto,
-	) {
+	transition(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: TransitionTaskDto) {
 		return this.tasksService.transition(user, id, dto);
 	}
 

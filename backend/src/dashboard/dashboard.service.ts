@@ -19,9 +19,7 @@ export class DashboardService {
 
 		const openWhere = {
 			status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-			...(user.systemRole === SystemRole.ADMIN
-				? {}
-				: { project: { members: { some: { userId: user.id } } } }),
+			...(user.systemRole === SystemRole.ADMIN ? {} : { project: { members: { some: { userId: user.id } } } }),
 		};
 
 		const [projects, myTasks, upcoming, openTasks] = await Promise.all([
@@ -53,10 +51,7 @@ export class DashboardService {
 				where: {
 					deadlineAt: { not: null },
 					status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-					project:
-						user.systemRole === SystemRole.ADMIN
-							? undefined
-							: { members: { some: { userId: user.id } } },
+					project: user.systemRole === SystemRole.ADMIN ? undefined : { members: { some: { userId: user.id } } },
 				},
 				include: {
 					author: true,

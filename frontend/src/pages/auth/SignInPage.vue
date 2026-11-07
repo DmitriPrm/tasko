@@ -42,13 +42,7 @@ const handleSubmit = async () => {
 				<el-input v-model="form.email" size="large" autocomplete="username" />
 			</el-form-item>
 			<el-form-item :label="translate('auth.password')">
-				<el-input
-					v-model="form.password"
-					type="password"
-					show-password
-					size="large"
-					autocomplete="current-password"
-				/>
+				<el-input v-model="form.password" type="password" show-password size="large" autocomplete="current-password" />
 			</el-form-item>
 			<base-button class="auth-shell__submit" type="primary" native-type="submit" :loading="isSubmitting">
 				{{ translate("auth.submit") }}

@@ -63,10 +63,7 @@ const groups = computed(() => {
 });
 
 const changesCount = computed(() =>
-	roles.value.reduce(
-		(sum, role) => sum + items.value.filter((item) => isChanged(role, item.code)).length,
-		0,
-	),
+	roles.value.reduce((sum, role) => sum + items.value.filter((item) => isChanged(role, item.code)).length, 0),
 );
 
 const enabledCount = (role: string) => Object.values(grants.value[role] ?? {}).filter(Boolean).length;
@@ -147,7 +144,9 @@ const handleSave = async () => {
 				<section v-for="group in groups" :key="group.id" class="settings-rights__group">
 					<div class="settings-rights__row settings-rights__row--group">
 						<button class="settings-rights__toggle" type="button" @click="handleToggleGroup(group.id)">
-							<span class="settings-rights__chevron" :class="{ 'settings-rights__chevron--open': isOpen(group.id) }">›</span>
+							<span class="settings-rights__chevron" :class="{ 'settings-rights__chevron--open': isOpen(group.id) }"
+								>›</span
+							>
 							<strong>{{ group.title }}</strong>
 							<span class="settings-rights__count">{{ group.rows.length }}</span>
 						</button>
@@ -157,17 +156,15 @@ const handleSave = async () => {
 								:indeterminate="groupState(role, group.rows).indeterminate"
 								:disabled="groupState(role, group.rows).disabled"
 								:title="translate('settings.toggleGroup')"
-								@change="(value: string | number | boolean) => handleToggleRoleInGroup(role, group.rows, value === true)"
+								@change="
+									(value: string | number | boolean) => handleToggleRoleInGroup(role, group.rows, value === true)
+								"
 							/>
 						</span>
 					</div>
 
 					<template v-if="isOpen(group.id)">
-						<div
-							v-for="row in group.rows"
-							:key="row.code"
-							class="settings-rights__row settings-rights__row--item"
-						>
+						<div v-for="row in group.rows" :key="row.code" class="settings-rights__row settings-rights__row--item">
 							<span class="settings-rights__label">{{ row.label }}</span>
 							<span v-for="role in roles" :key="role" class="settings-rights__cell">
 								<el-switch
@@ -185,7 +182,9 @@ const handleSave = async () => {
 		</el-skeleton>
 
 		<div v-if="changesCount" class="settings-rights__bar">
-			<span>{{ translate("settings.unsaved") }}: <strong>{{ changesCount }}</strong></span>
+			<span
+				>{{ translate("settings.unsaved") }}: <strong>{{ changesCount }}</strong></span
+			>
 			<base-flex :gap="3">
 				<base-button :disabled="isSaving" @click="handleReset">{{ translate("settings.reset") }}</base-button>
 				<base-button type="primary" :loading="isSaving" @click="handleSave">

@@ -1,6 +1,14 @@
 import { createDelete, createGet, createPatch, createPost } from "@/shared/api/helpers/api";
 import { ZWrapDTO } from "@/shared/api/helpers/ZWrapDTO";
-import { ZFormSchema, ZPaginated, ZProfile, ZProfileField, ZProfileSection, ZSuccess, ZUser } from "@/shared/api/v0/schemas";
+import {
+	ZFormSchema,
+	ZPaginated,
+	ZProfile,
+	ZProfileField,
+	ZProfileSection,
+	ZSuccess,
+	ZUser,
+} from "@/shared/api/v0/schemas";
 
 export const getUsers = createGet({
 	path: "/users",

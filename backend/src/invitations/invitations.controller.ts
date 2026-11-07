@@ -29,20 +29,12 @@ export class InvitationsController {
 
 	@Post("projects/:id/invitations/:invitationId/resend")
 	@Throttle({ default: { limit: 20, ttl: 60_000 } })
-	resend(
-		@CurrentUser() user: AuthUser,
-		@Param("id") projectId: string,
-		@Param("invitationId") invitationId: string,
-	) {
+	resend(@CurrentUser() user: AuthUser, @Param("id") projectId: string, @Param("invitationId") invitationId: string) {
 		return this.invitations.resend(user, projectId, invitationId);
 	}
 
 	@Delete("projects/:id/invitations/:invitationId")
-	revoke(
-		@CurrentUser() user: AuthUser,
-		@Param("id") projectId: string,
-		@Param("invitationId") invitationId: string,
-	) {
+	revoke(@CurrentUser() user: AuthUser, @Param("id") projectId: string, @Param("invitationId") invitationId: string) {
 		return this.invitations.revoke(user, projectId, invitationId);
 	}
 

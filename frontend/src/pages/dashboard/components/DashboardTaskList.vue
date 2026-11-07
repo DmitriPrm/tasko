@@ -28,12 +28,7 @@ const handleOpen = (taskId: string) => {
 	<base-card class="dashboard-task-list">
 		<h3>{{ title }}</h3>
 		<p v-if="!tasks.length" class="dashboard-task-list__empty">{{ translate("common.empty") }}</p>
-		<div
-			v-for="task in tasks"
-			:key="task.id"
-			class="dashboard-task-list__item"
-			@click="() => handleOpen(task.id)"
-		>
+		<div v-for="task in tasks" :key="task.id" class="dashboard-task-list__item" @click="() => handleOpen(task.id)">
 			<base-flex align="center" justify="space-between" :gap="4">
 				<span class="dashboard-task-list__title">{{ task.title }}</span>
 				<base-flex class="dashboard-task-list__meta" align="center" :gap="4">

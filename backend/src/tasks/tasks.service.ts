@@ -1,9 +1,4 @@
-import {
-	BadRequestException,
-	ForbiddenException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
@@ -53,12 +48,8 @@ export class TasksService {
 			...(query.status ? { status: query.status } : {}),
 			...(query.priority ? { priority: query.priority } : {}),
 			...(query.type ? { type: query.type } : {}),
-			...(query.search
-				? { title: { contains: query.search, mode: "insensitive" } }
-				: {}),
-			...(user.systemRole === SystemRole.ADMIN
-				? {}
-				: { project: { members: { some: { userId: user.id } } } }),
+			...(query.search ? { title: { contains: query.search, mode: "insensitive" } } : {}),
+			...(user.systemRole === SystemRole.ADMIN ? {} : { project: { members: { some: { userId: user.id } } } }),
 		};
 
 		const orderBy = this.buildOrderBy(query.sortBy, query.sortOrder);
@@ -178,10 +169,8 @@ export class TasksService {
 		}
 
 		this.assertDates(
-			dto.plannedStartAt === undefined
-				? task.plannedStartAt?.toISOString()
-				: dto.plannedStartAt ?? undefined,
-			dto.deadlineAt === undefined ? task.deadlineAt?.toISOString() : dto.deadlineAt ?? undefined,
+			dto.plannedStartAt === undefined ? task.plannedStartAt?.toISOString() : (dto.plannedStartAt ?? undefined),
+			dto.deadlineAt === undefined ? task.deadlineAt?.toISOString() : (dto.deadlineAt ?? undefined),
 			task.createdAt,
 		);
 
@@ -234,13 +223,8 @@ export class TasksService {
 				isCompleted: dto.isCompleted,
 				completedAt: this.resolveCompletedAt(task, dto.isCompleted),
 				plannedStartAt:
-					dto.plannedStartAt === undefined
-						? undefined
-						: dto.plannedStartAt
-							? new Date(dto.plannedStartAt)
-							: null,
-				deadlineAt:
-					dto.deadlineAt === undefined ? undefined : dto.deadlineAt ? new Date(dto.deadlineAt) : null,
+					dto.plannedStartAt === undefined ? undefined : dto.plannedStartAt ? new Date(dto.plannedStartAt) : null,
+				deadlineAt: dto.deadlineAt === undefined ? undefined : dto.deadlineAt ? new Date(dto.deadlineAt) : null,
 				changeHistory: {
 					create: changes.map((change) => ({
 						...change,
@@ -314,10 +298,7 @@ export class TasksService {
 			data: {
 				status: nextStatus,
 				columnId: column?.id,
-				actualStartAt:
-					nextStatus === TaskStatus.IN_PROGRESS && !task.actualStartAt
-						? new Date()
-						: task.actualStartAt,
+				actualStartAt: nextStatus === TaskStatus.IN_PROGRESS && !task.actualStartAt ? new Date() : task.actualStartAt,
 				completedAt: nextStatus === TaskStatus.DONE ? new Date() : task.completedAt,
 				statusHistory: {
 					create: {
@@ -460,20 +441,13 @@ export class TasksService {
 		throw new ForbiddenException("Недостаточно прав для смены статуса");
 	}
 
-	private resolveCompletedAt(
-		task: { status: TaskStatus; completedAt: Date | null },
-		isCompleted?: boolean,
-	) {
+	private resolveCompletedAt(task: { status: TaskStatus; completedAt: Date | null }, isCompleted?: boolean) {
 		if (isCompleted === undefined) return undefined;
 		if (isCompleted) return task.completedAt ?? new Date();
 		return task.status === TaskStatus.DONE ? task.completedAt : null;
 	}
 
-	private assertDates(
-		plannedStartAt?: string | null,
-		deadlineAt?: string | null,
-		createdAt?: Date,
-	) {
+	private assertDates(plannedStartAt?: string | null, deadlineAt?: string | null, createdAt?: Date) {
 		if (deadlineAt && createdAt && new Date(deadlineAt) < createdAt) {
 			throw new BadRequestException("Дедлайн не может быть раньше даты создания");
 		}

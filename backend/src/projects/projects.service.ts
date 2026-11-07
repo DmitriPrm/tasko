@@ -1,9 +1,4 @@
-import {
-	BadRequestException,
-	ConflictException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ProjectRole, ProjectStatus, SystemRole } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
@@ -42,9 +37,7 @@ export class ProjectsService {
 		const where = {
 			...(user.systemRole === SystemRole.ADMIN ? {} : { members: { some: { userId: user.id } } }),
 			...(query.status ? { status: query.status } : { status: { not: ProjectStatus.ARCHIVED } }),
-			...(query.search
-				? { name: { contains: query.search, mode: "insensitive" as const } }
-				: {}),
+			...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
 		};
 
 		const [items, total] = await this.prisma.$transaction([
@@ -110,8 +103,7 @@ export class ProjectsService {
 				status: dto.status,
 				plannedStartAt:
 					dto.plannedStartAt === undefined ? undefined : dto.plannedStartAt ? new Date(dto.plannedStartAt) : null,
-				plannedEndAt:
-					dto.plannedEndAt === undefined ? undefined : dto.plannedEndAt ? new Date(dto.plannedEndAt) : null,
+				plannedEndAt: dto.plannedEndAt === undefined ? undefined : dto.plannedEndAt ? new Date(dto.plannedEndAt) : null,
 			},
 			include: projectInclude,
 		});

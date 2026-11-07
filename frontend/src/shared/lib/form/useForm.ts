@@ -17,9 +17,7 @@ export function useForm() {
 		}
 	};
 
-	const values = computed<FormValues>(() =>
-		Object.fromEntries(fields.value.map((field) => [field.code, field.value])),
-	);
+	const values = computed<FormValues>(() => Object.fromEntries(fields.value.map((field) => [field.code, field.value])));
 
 	const payload = computed(() => {
 		const result: Record<string, unknown> = {};

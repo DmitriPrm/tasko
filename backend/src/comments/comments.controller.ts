@@ -18,11 +18,7 @@ export class CommentsController {
 	}
 
 	@Post()
-	create(
-		@CurrentUser() user: AuthUser,
-		@Param("id") taskId: string,
-		@Body() dto: CreateCommentDto,
-	) {
+	create(@CurrentUser() user: AuthUser, @Param("id") taskId: string, @Body() dto: CreateCommentDto) {
 		return this.commentsService.create(user, taskId, dto);
 	}
 }

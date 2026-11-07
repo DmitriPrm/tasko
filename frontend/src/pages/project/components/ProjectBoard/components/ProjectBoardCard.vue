@@ -27,9 +27,7 @@ const isAssigneeOpen = ref(false);
 const isDeadlineOpen = ref(false);
 
 const memberUsers = computed(() => (props.members || []).map((member) => member.user));
-const deadlineValue = computed(() =>
-	props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : "",
-);
+const deadlineValue = computed(() => (props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : ""));
 
 const handleOpen = () => emit("open", props.task.id);
 const handleComplete = (event: Event) => {
@@ -70,20 +68,12 @@ const handleDeadline = (value: string | "") => {
 				</el-icon>
 			</button>
 			<base-flex direction="column" :gap="3" width="full">
-				<strong
-					class="project-board-card__title"
-					:class="{ 'project-board-card__title--done': task.isCompleted }"
-				>
+				<strong class="project-board-card__title" :class="{ 'project-board-card__title--done': task.isCompleted }">
 					{{ task.title }}
 				</strong>
 				<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
 				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
-					<span
-						v-for="tag in task.tags"
-						:key="tag.id"
-						class="project-board-card__tag"
-						:style="{ color: tag.color }"
-					>
+					<span v-for="tag in task.tags" :key="tag.id" class="project-board-card__tag" :style="{ color: tag.color }">
 						{{ tag.name }}
 					</span>
 				</base-flex>
@@ -101,7 +91,7 @@ const handleDeadline = (value: string | "") => {
 						<template #reference>
 							<button
 								class="project-board-card__date"
-								:class="{ 								'project-board-card__date--overdue': isTaskOverdue(task) }"
+								:class="{ 'project-board-card__date--overdue': isTaskOverdue(task) }"
 								type="button"
 								@click="handleStop"
 								@mousedown="handleStop"
@@ -119,19 +109,9 @@ const handleDeadline = (value: string | "") => {
 							@update:model-value="handleAssignee"
 						/>
 						<template #reference>
-							<button
-								class="project-board-card__assignee"
-								type="button"
-								@click="handleStop"
-								@mousedown="handleStop"
-							>
+							<button class="project-board-card__assignee" type="button" @click="handleStop" @mousedown="handleStop">
 								<base-user-name v-if="task.assignee" :user="task.assignee" icon-only :size="24" :link="false" />
-								<base-flex
-									v-else
-									class="project-board-card__assignee-empty"
-									align="center"
-									justify="center"
-								>
+								<base-flex v-else class="project-board-card__assignee-empty" align="center" justify="center">
 									<el-icon :size="14"><plus /></el-icon>
 								</base-flex>
 							</button>

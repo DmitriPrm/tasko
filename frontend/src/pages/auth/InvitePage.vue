@@ -32,9 +32,7 @@ onMounted(async () => {
 });
 
 const isPending = computed(() => invitation.value?.status === "PENDING");
-const isAddressee = computed(
-	() => authStore.user?.email.toLowerCase() === invitation.value?.email.toLowerCase(),
-);
+const isAddressee = computed(() => authStore.user?.email.toLowerCase() === invitation.value?.email.toLowerCase());
 const statusText = computed(() => {
 	const status = invitation.value?.status;
 	if (status === "EXPIRED") return translate("invitation.expired");
@@ -111,7 +109,8 @@ const handleLogout = async () => {
 
 			<template v-else-if="!isAddressee">
 				<p class="auth-shell__footer">
-					{{ translate("invitation.wrongAccount") }} <strong>{{ authStore.user?.email }}</strong>.
+					{{ translate("invitation.wrongAccount") }} <strong>{{ authStore.user?.email }}</strong
+					>.
 				</p>
 				<base-button class="auth-shell__submit" type="primary" @click="handleLogout">
 					{{ translate("invitation.switchAccount") }}

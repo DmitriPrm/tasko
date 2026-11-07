@@ -51,17 +51,12 @@ useOnTaskChange({ reload: () => fetch() });
 		<template #actions>
 			<base-flex class="tasks-page__actions" align="center" :gap="3" wrap="wrap" width="full">
 				<el-switch v-model="onlyMine" :active-text="translate('task.my')" />
-				<el-select
-					v-model="status"
-					class="tasks-page__status"
-					clearable
-					:placeholder="translate('task.status')"
-				>
+				<el-select v-model="status" class="tasks-page__status" clearable :placeholder="translate('task.status')">
 					<el-option :label="translate('taskStatus.TODO')" value="TODO" />
 					<el-option :label="translate('taskStatus.IN_PROGRESS')" value="IN_PROGRESS" />
 					<el-option :label="translate('taskStatus.REVIEW')" value="REVIEW" />
 					<el-option :label="translate('taskStatus.DONE')" value="DONE" />
-										<el-option :label="translate('taskStatus.CANCELLED')" value="CANCELLED" />
+					<el-option :label="translate('taskStatus.CANCELLED')" value="CANCELLED" />
 				</el-select>
 			</base-flex>
 		</template>
