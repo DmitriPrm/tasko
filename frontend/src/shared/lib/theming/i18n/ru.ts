@@ -207,6 +207,22 @@ export const ru = {
 		sortDeadline: "По сроку",
 		sortPriority: "По приоритету",
 		sortCreated: "По дате создания",
+		cancel: "Отменить задачу",
+		cancelConfirmTitle: "Отменить задачу?",
+		cancelConfirmText:
+			"Задача уже была в работе, поэтому её нельзя удалить. Она перейдёт в статус «Отменена», история сохранится.",
+		cancelled: "Задача отменена, история сохранена",
+		field: {
+			title: "Название",
+			description: "Описание",
+			type: "Тип",
+			priority: "Приоритет",
+			assigneeId: "Исполнитель",
+			isCompleted: "Отметка выполнения",
+			plannedStartAt: "Плановый старт",
+			deadlineAt: "Срок",
+			parentTaskId: "Родительская задача",
+		},
 	},
 	taskStatus: {
 		TODO: "К выполнению",

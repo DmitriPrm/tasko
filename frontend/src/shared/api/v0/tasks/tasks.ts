@@ -1,6 +1,6 @@
 import { createDelete, createGet, createPatch, createPost } from "@/shared/api/helpers/api";
 import { ZWrapDTO } from "@/shared/api/helpers/ZWrapDTO";
-import { ZFormSchema, ZPaginated, ZSuccess, ZTask, ZTaskHistory } from "@/shared/api/v0/schemas";
+import { ZFormSchema, ZPaginated, ZTask, ZTaskHistory, ZTaskRemoveResult } from "@/shared/api/v0/schemas";
 
 export const getTasks = createGet({
 	path: "/tasks",
@@ -39,7 +39,7 @@ export const updateTask = createPatch({
 
 export const deleteTask = createDelete({
 	path: "/tasks/:id",
-	type: ZWrapDTO(ZSuccess),
+	type: ZWrapDTO(ZTaskRemoveResult),
 });
 
 export const transitionTask = createPost({

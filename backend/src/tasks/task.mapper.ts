@@ -3,6 +3,7 @@ import { Project, Tag, Task, User } from "@prisma/client";
 import { toTagDto } from "../projects/project.mapper";
 import { toUserDto } from "../users/user.mapper";
 import { buildForecast } from "./forecast";
+import { isTaskStarted } from "./task.constants";
 
 type TaskWithRelations = Task & {
 	author: User;
@@ -40,6 +41,7 @@ export function toTaskDto(task: TaskWithRelations) {
 		project: task.project ? { id: task.project.id, name: task.project.name, status: task.project.status } : undefined,
 		commentsCount: task._count?.comments ?? 0,
 		subtasksCount: task._count?.subtasks ?? 0,
+		isStarted: isTaskStarted(task),
 		forecast: buildForecast(task),
 	};
 }

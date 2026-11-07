@@ -24,6 +24,7 @@ describe("TasksService", () => {
 	const projectAccess = {
 		assertCanView: jest.fn(),
 		isProjectMember: jest.fn(),
+		isActiveProjectMember: jest.fn().mockResolvedValue(true),
 	};
 	const notifications = {
 		notifyStatusChanged: jest.fn(),
@@ -86,6 +87,7 @@ describe("TasksService", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		prisma.task.findUnique.mockResolvedValue(task);
+		projectAccess.isActiveProjectMember.mockResolvedValue(true);
 		prisma.task.update.mockImplementation(async ({ data }) => ({ ...task, ...data }));
 		prisma.projectColumn.count.mockResolvedValue(5);
 		prisma.projectColumn.findFirst.mockImplementation(
@@ -137,11 +139,62 @@ describe("TasksService", () => {
 		);
 	});
 
-	it("deletes a task after edit access check", async () => {
+	it("deletes a task that was never started", async () => {
 		const result = await service.remove(actor, "t1");
 
 		expect(prisma.task.delete).toHaveBeenCalledWith({ where: { id: "t1" } });
-		expect(result.success).toBe(true);
+		expect(result).toEqual({ success: true, cancelled: false });
+	});
+
+	it("cancels a started task instead of deleting it and keeps history", async () => {
+		prisma.task.findUnique.mockResolvedValue({
+			...task,
+			status: TaskStatus.IN_PROGRESS,
+			actualStartAt: new Date("2026-01-02"),
+		});
+
+		const result = await service.remove(actor, "t1");
+
+		expect(prisma.task.delete).not.toHaveBeenCalled();
+		expect(result).toEqual({ success: true, cancelled: true });
+		expect(prisma.task.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					status: TaskStatus.CANCELLED,
+					statusHistory: {
+						create: expect.objectContaining({ fromStatus: TaskStatus.IN_PROGRESS, toStatus: TaskStatus.CANCELLED }),
+					},
+				}),
+			}),
+		);
+	});
+
+	it("treats a task closed straight from TODO as started", async () => {
+		prisma.task.findUnique.mockResolvedValue({ ...task, status: TaskStatus.DONE });
+
+		const result = await service.remove(actor, "t1");
+
+		expect(result.cancelled).toBe(true);
+		expect(prisma.task.delete).not.toHaveBeenCalled();
+	});
+
+	it("rejects a deadline earlier than the creation day", async () => {
+		await expect(service.update(actor, "t1", { deadlineAt: "2025-12-25T00:00:00.000Z" })).rejects.toThrow(
+			"Дедлайн не может быть раньше даты создания",
+		);
+	});
+
+	it("accepts a deadline on the creation day in an earlier time zone", async () => {
+		// 2026-01-01 в UTC+3 — это 2025-12-31T21:00Z, а задача создана 2026-01-01T00:00Z
+		await expect(service.update(actor, "t1", { deadlineAt: "2025-12-31T21:00:00.000Z" })).resolves.toBeDefined();
+	});
+
+	it("does not assign a blocked or foreign user", async () => {
+		projectAccess.isActiveProjectMember.mockResolvedValue(false);
+
+		await expect(service.update(actor, "t1", { assigneeId: "u3" })).rejects.toThrow(
+			"Исполнителем может быть только активный участник проекта",
+		);
 	});
 });
 

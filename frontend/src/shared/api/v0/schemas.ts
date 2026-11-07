@@ -166,6 +166,7 @@ export const ZTask = z.object({
 		.optional(),
 	commentsCount: z.number(),
 	subtasksCount: z.number(),
+	isStarted: z.boolean().optional(),
 	canEdit: z.boolean().optional(),
 	forecast: z
 		.object({
@@ -311,6 +312,12 @@ export const ZTableLayout = z.object({
 	widths: z.record(z.string(), z.number()),
 });
 
+export const ZTaskRemoveResult = z.object({
+	success: z.boolean(),
+	/** true — задача уже была в работе и не удалена, а отменена */
+	cancelled: z.boolean(),
+});
+
 export const ZSuccess = z.object({
 	success: z.boolean(),
 });
@@ -341,3 +348,4 @@ export type TaskStatus = z.infer<typeof ZTaskStatus>;
 export type TaskPriority = z.infer<typeof ZTaskPriority>;
 export type TaskType = z.infer<typeof ZTaskType>;
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type TaskHistory = z.infer<typeof ZTaskHistory>;

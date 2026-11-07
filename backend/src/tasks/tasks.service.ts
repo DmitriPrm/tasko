@@ -11,9 +11,11 @@ import { CreateTaskDto } from "./dto/create-task.dto";
 import { TasksQueryDto } from "./dto/tasks-query.dto";
 import { TransitionTaskDto } from "./dto/transition-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
-import { TASK_TRANSITIONS } from "./task.constants";
+import { isTaskStarted, TASK_TRANSITIONS } from "./task.constants";
 import { getTaskFields } from "./task.form";
 import { toTaskDto } from "./task.mapper";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const taskInclude = {
 	author: true,
@@ -320,8 +322,33 @@ export class TasksService {
 		await this.access.assert(user, "TASKS_DELETE");
 		const task = await this.getTaskOrThrow(taskId);
 		await this.assertCanEdit(user, task.projectId, task.authorId);
+
+		// Начатую задачу не стираем: её история нужна для аудита и обучающей выборки
+		if (isTaskStarted(task)) {
+			if (task.status !== TaskStatus.CANCELLED) {
+				const column = await this.resolveColumnByStatus(task.projectId, TaskStatus.CANCELLED);
+				const cancelled = await this.prisma.task.update({
+					where: { id: taskId },
+					data: {
+						status: TaskStatus.CANCELLED,
+						columnId: column?.id,
+						statusHistory: {
+							create: {
+								fromStatus: task.status,
+								toStatus: TaskStatus.CANCELLED,
+								changedBy: user.id,
+								comment: "Отменена вместо удаления",
+							},
+						},
+					},
+				});
+				await this.notifications.notifyStatusChanged(cancelled, user.id, task.status, TaskStatus.CANCELLED);
+			}
+			return { success: true, cancelled: true };
+		}
+
 		await this.prisma.task.delete({ where: { id: taskId } });
-		return { success: true };
+		return { success: true, cancelled: false };
 	}
 
 	async history(user: AuthUser, taskId: string) {
@@ -341,6 +368,20 @@ export class TasksService {
 			}),
 		]);
 
+		// В истории исполнитель хранится как id; для показа подставляем имя
+		const userIds = new Set<string>();
+		for (const item of changeHistory) {
+			if (item.fieldName !== "assigneeId") continue;
+			if (item.oldValue) userIds.add(item.oldValue);
+			if (item.newValue) userIds.add(item.newValue);
+		}
+		const users = userIds.size
+			? await this.prisma.user.findMany({ where: { id: { in: [...userIds] } }, select: { id: true, fullName: true } })
+			: [];
+		const names = new Map(users.map((item) => [item.id, item.fullName]));
+		const display = (fieldName: string, value: string | null) =>
+			fieldName === "assigneeId" && value ? (names.get(value) ?? value) : value;
+
 		return {
 			statusHistory: statusHistory.map((item) => ({
 				id: item.id,
@@ -356,8 +397,8 @@ export class TasksService {
 			changeHistory: changeHistory.map((item) => ({
 				id: item.id,
 				fieldName: item.fieldName,
-				oldValue: item.oldValue,
-				newValue: item.newValue,
+				oldValue: display(item.fieldName, item.oldValue),
+				newValue: display(item.fieldName, item.newValue),
 				changedAt: item.changedAt.toISOString(),
 				actor: {
 					id: item.actor.id,
@@ -398,9 +439,9 @@ export class TasksService {
 	}
 
 	private async assertAssignee(projectId: string, userId: string) {
-		const isMember = await this.projectAccess.isProjectMember(projectId, userId);
+		const isMember = await this.projectAccess.isActiveProjectMember(projectId, userId);
 		if (!isMember) {
-			throw new BadRequestException("Исполнителем может быть только участник проекта");
+			throw new BadRequestException("Исполнителем может быть только активный участник проекта");
 		}
 	}
 
@@ -447,8 +488,10 @@ export class TasksService {
 		return task.status === TaskStatus.DONE ? task.completedAt : null;
 	}
 
-	private assertDates(plannedStartAt?: string | null, deadlineAt?: string | null, createdAt?: Date) {
-		if (deadlineAt && createdAt && new Date(deadlineAt) < createdAt) {
+	private assertDates(plannedStartAt?: string | null, deadlineAt?: string | null, createdAt: Date = new Date()) {
+		// Дата из календаря приходит как начало дня в поясе пользователя, поэтому сравниваем с запасом в сутки:
+		// срок «сегодня» допустим в любом часовом поясе, а вчерашний — нет
+		if (deadlineAt && new Date(deadlineAt).getTime() < createdAt.getTime() - DAY_MS) {
 			throw new BadRequestException("Дедлайн не может быть раньше даты создания");
 		}
 

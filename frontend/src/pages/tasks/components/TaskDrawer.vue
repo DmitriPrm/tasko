@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { CircleCheck, CircleCheckFilled, Plus, Close } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
+import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 
 import TaskComments from "@/pages/tasks/components/TaskComments.vue";
@@ -142,9 +143,20 @@ const handleSave = async () => {
 
 const handleDelete = async () => {
 	if (!props.taskId) return;
-	const confirmed = await openConfirm({ title: translate("task.delete") });
+	// Начатую задачу бэкенд не удаляет, а отменяет: предупреждаем об этом заранее
+	const isStarted = Boolean(task.value?.isStarted);
+	const confirmed = await openConfirm(
+		isStarted
+			? {
+					title: translate("task.cancelConfirmTitle"),
+					text: translate("task.cancelConfirmText"),
+					confirmLabel: translate("task.cancel"),
+				}
+			: { title: translate("task.delete") },
+	);
 	if (!confirmed) return;
-	await removeTask();
+	const result = await removeTask();
+	if (result?.cancelled) ElMessage({ type: "success", message: translate("task.cancelled") });
 	emit("deleted");
 	handleClose();
 };
@@ -322,7 +334,7 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 						{{ translate("common.save") }}
 					</base-button>
 					<base-button type="danger" :loading="isDeleting" @click="handleDelete">
-						{{ translate("task.delete") }}
+						{{ task.isStarted ? translate("task.cancel") : translate("task.delete") }}
 					</base-button>
 				</base-flex>
 

@@ -207,6 +207,22 @@ export const en = {
 		sortDeadline: "By due date",
 		sortPriority: "By priority",
 		sortCreated: "By created date",
+		cancel: "Cancel task",
+		cancelConfirmTitle: "Cancel this task?",
+		cancelConfirmText:
+			"This task has already been started, so it can't be deleted. It will move to Cancelled and its history will be kept.",
+		cancelled: "Task cancelled, history kept",
+		field: {
+			title: "Title",
+			description: "Description",
+			type: "Type",
+			priority: "Priority",
+			assigneeId: "Assignee",
+			isCompleted: "Completion mark",
+			plannedStartAt: "Planned start",
+			deadlineAt: "Deadline",
+			parentTaskId: "Parent task",
+		},
 	},
 	taskStatus: {
 		TODO: "To do",
