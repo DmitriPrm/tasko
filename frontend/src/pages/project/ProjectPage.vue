@@ -20,10 +20,12 @@ import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { isTaskOverdue } from "@/shared/lib/helpers/formatDate";
 import {
+	PRIORITY_RANK,
 	priorityLabel,
 	projectStatusDot,
 	projectStatusLabel,
 	statusLabel,
+	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
@@ -193,8 +195,8 @@ const handleChangeDeadline = ({ taskId, deadlineAt }: { taskId: string; deadline
 
 const taskColumns = computed(() => [
 	{ key: "title", label: translate("task.name") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 

@@ -12,11 +12,13 @@ import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { formatDate, isTaskOverdue } from "@/shared/lib/helpers/formatDate";
 import {
+	PRIORITY_RANK,
 	priorityLabel,
 	priorityTagType,
 	projectStatusDot,
 	roleLabel,
 	statusLabel,
+	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
@@ -153,8 +155,8 @@ const initialTab = () => (canViewTasks.value ? "overview" : "details");
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "deadlineAt", label: translate("task.deadline") },
 ]);
 

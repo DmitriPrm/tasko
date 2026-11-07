@@ -11,6 +11,8 @@ export interface BaseTableColumn {
 	width?: string;
 	sortKey?: string;
 	sortable?: boolean;
+	/** Своё значение для сортировки, когда порядок не алфавитный (приоритет, статус) */
+	sortValue?: (row: any) => string | number | null | undefined;
 }
 
 const emit = defineEmits<{
@@ -72,6 +74,7 @@ const { fetch: saveLayout } = useFetch(baseApi.tableLayouts.saveTableLayout, "da
 const readPath = (row: any, path: string) => path.split(".").reduce<any>((acc, key) => acc?.[key], row);
 
 const sortValue = (row: any, column: BaseTableColumn) => {
+	if (column.sortValue) return column.sortValue(row) ?? "";
 	const raw = column.sortKey ? readPath(row, column.sortKey) : row[column.key];
 	if (raw && typeof raw === "object") {
 		return raw.fullName || raw.name || raw.title || "";

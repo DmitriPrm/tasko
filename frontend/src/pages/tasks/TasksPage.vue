@@ -6,7 +6,7 @@ import type { Task } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { formatDate } from "@/shared/lib/helpers/formatDate";
-import { priorityLabel, statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
+import { PRIORITY_RANK, priorityLabel, STATUS_RANK, statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
@@ -33,8 +33,8 @@ const { state, isLoading, fetch } = useFetch(baseApi.tasks.getTasks, "data.items
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "deadlineAt", label: translate("task.deadline") },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
