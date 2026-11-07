@@ -88,7 +88,8 @@ describe("UsersService", () => {
 		prisma.user.findUnique.mockResolvedValue(user);
 		prisma.user.update.mockResolvedValue({ ...user, isActive: false });
 
-		const result = await service.update(user, user.id, { isActive: false });
+		const admin = { ...user, id: "admin", systemRole: SystemRole.ADMIN };
+		const result = await service.update(admin, user.id, { isActive: false });
 
 		expect(result.isActive).toBe(false);
 		expect(prisma.user.update).toHaveBeenCalledWith(

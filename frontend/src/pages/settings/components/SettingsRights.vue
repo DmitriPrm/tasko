@@ -157,7 +157,7 @@ const handleSave = async () => {
 								:indeterminate="groupState(role, group.rows).indeterminate"
 								:disabled="groupState(role, group.rows).disabled"
 								:title="translate('settings.toggleGroup')"
-								@change="(value) => handleToggleRoleInGroup(role, group.rows, value === true)"
+								@change="(value: string | number | boolean) => handleToggleRoleInGroup(role, group.rows, value === true)"
 							/>
 						</span>
 					</div>
@@ -175,7 +175,7 @@ const handleSave = async () => {
 									:disabled="isLocked(role, row.code)"
 									:title="isLocked(role, row.code) ? translate('settings.locked') : undefined"
 									:class="{ 'settings-rights__switch--changed': isChanged(role, row.code) }"
-									@change="(value) => setGrant(role, row.code, value === true)"
+									@change="(value: string | number | boolean) => setGrant(role, row.code, value === true)"
 								/>
 							</span>
 						</div>

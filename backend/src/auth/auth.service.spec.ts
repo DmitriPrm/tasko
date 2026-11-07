@@ -17,6 +17,7 @@ jest.mock("bcrypt", () => ({
 
 jest.mock("../common/avatar/files", () => ({
 	saveGeneratedAvatar: jest.fn().mockReturnValue("avatar.svg"),
+	publicAvatarUrl: jest.fn().mockReturnValue(null),
 }));
 
 describe("AuthService", () => {

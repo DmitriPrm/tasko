@@ -27,10 +27,10 @@ const askTitle = async (title: string, initial = "") => {
 		const result = await ElMessageBox.prompt("", title, {
 			inputValue: initial,
 			inputPlaceholder: translate("profile.sectionName"),
-			inputAttrs: { maxlength: 80 },
 			confirmButtonText: translate("common.save"),
 			cancelButtonText: translate("common.cancel"),
-			inputValidator: (input: string) => input.trim().length > 0,
+			// В этой версии Element Plus у prompt нет inputAttrs, поэтому длину проверяем здесь
+			inputValidator: (input: string) => input.trim().length > 0 && input.trim().length <= 80,
 			inputErrorMessage: translate("settings.sectionEmpty"),
 		});
 		return result.value.trim();
