@@ -60,6 +60,17 @@ enum DependencyType {
   RELATED
 }
 
+enum ModelKind {
+  DURATION
+  RISK
+}
+
+enum PredictionTrigger {
+  CREATED
+  UPDATED
+  MANUAL
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -226,6 +237,7 @@ model Task {
   notifications   Notification[]
   dependenciesOut TaskDependency[]    @relation("DependencySource")
   dependenciesIn  TaskDependency[]    @relation("DependencyTarget")
+  predictions     TaskPrediction[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -320,6 +332,48 @@ model Attachment {
 
   @@index([taskId])
   @@map("attachments")
+}
+
+/// Версия ML-модели, которая хоть раз дала прогноз. Сведения берутся из /models/info сервиса прогноза
+model ModelVersion {
+  id         String    @id @default(uuid())
+  kind       ModelKind
+  version    String    @unique
+  algorithm  String
+  trainedAt  DateTime? @map("trained_at")
+  sampleSize Int?      @map("sample_size")
+  dataSource String?   @map("data_source")
+  /// Метрики на тестовой выборке (MAE, ROC-AUC и т. д.)
+  metrics    Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  durationPredictions TaskPrediction[] @relation("PredictionDurationModel")
+  riskPredictions     TaskPrediction[] @relation("PredictionRiskModel")
+
+  @@map("model_versions")
+}
+
+/// Прогноз ML-сервиса по задаче. Хранится каждый пересчёт; в интерфейсе показывается последний
+model TaskPrediction {
+  id              String            @id @default(uuid())
+  taskId          String            @map("task_id")
+  trigger         PredictionTrigger
+  durationHours   Float?            @map("duration_hours")
+  riskProbability Float?            @map("risk_probability")
+  durationModelId String?           @map("duration_model_id")
+  riskModelId     String?           @map("risk_model_id")
+  /// Главные факторы: { risk: [...], duration: [...] }
+  factors         Json
+  /// Что было отправлено в модель (без имён и email) — для воспроизводимости
+  input           Json
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  task          Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  durationModel ModelVersion? @relation("PredictionDurationModel", fields: [durationModelId], references: [id], onDelete: SetNull)
+  riskModel     ModelVersion? @relation("PredictionRiskModel", fields: [riskModelId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@map("task_predictions")
 }
 
 model Comment {

@@ -2,6 +2,7 @@ import { TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { PredictionsService } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { TasksService } from "./tasks.service";
@@ -33,12 +34,14 @@ describe("TasksService", () => {
 	};
 
 	const access = { assert: jest.fn() };
+	const predictions = { refresh: jest.fn() };
 
 	const service = new TasksService(
 		prisma as unknown as PrismaService,
 		projectAccess as unknown as ProjectAccessService,
 		notifications as unknown as NotificationsService,
 		access as unknown as AccessService,
+		predictions as unknown as PredictionsService,
 	);
 
 	const actor = {
@@ -82,10 +85,12 @@ describe("TasksService", () => {
 		tags: [],
 		coAssignees: [],
 		_count: { comments: 0, subtasks: 0 },
+		predictions: [],
 	};
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		predictions.refresh.mockResolvedValue(null);
 		prisma.task.findUnique.mockResolvedValue(task);
 		projectAccess.isActiveProjectMember.mockResolvedValue(true);
 		prisma.task.update.mockImplementation(async ({ data }) => ({ ...task, ...data }));
@@ -126,6 +131,27 @@ describe("TasksService", () => {
 
 		expect(result.status).toBe(TaskStatus.IN_PROGRESS);
 		expect(notifications.notifyStatusChanged).toHaveBeenCalled();
+	});
+
+	it("recomputes the forecast when a field the model uses changes", async () => {
+		predictions.refresh.mockResolvedValue({
+			durationHours: 30,
+			riskProbability: 0.82,
+			createdAt: new Date("2026-01-02"),
+			factors: { risk: [{ feature: "priority", label: "Приоритет", impact: 0.2 }], duration: [] },
+			durationModel: { version: "duration-v1", algorithm: "ridge" },
+			riskModel: { version: "risk-v1", algorithm: "logistic_regression" },
+		});
+
+		const result = await service.update(actor, "t1", { priority: "CRITICAL" });
+
+		expect(predictions.refresh).toHaveBeenCalledWith("t1", "UPDATED");
+		expect(result.forecast).toMatchObject({ source: "ML", riskLevel: "HIGH", durationHours: 30 });
+	});
+
+	it("keeps the forecast when only the completion flag changes", async () => {
+		await service.update(actor, "t1", { isCompleted: true });
+		expect(predictions.refresh).not.toHaveBeenCalled();
 	});
 
 	it("toggles isCompleted without changing the column status", async () => {
@@ -208,6 +234,7 @@ describe("TasksService.list access", () => {
 		{} as unknown as ProjectAccessService,
 		{} as unknown as NotificationsService,
 		{} as unknown as AccessService,
+		{} as unknown as PredictionsService,
 	);
 
 	const executor = {

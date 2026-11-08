@@ -16,6 +16,7 @@ import { InvitationsModule } from "./invitations/invitations.module";
 import { MailModule } from "./mail/mail.module";
 import { HealthController } from "./health/health.controller";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { PredictionsModule } from "./predictions/predictions.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -41,6 +42,7 @@ import { UsersModule } from "./users/users.module";
 		AttachmentsModule,
 		NotificationsModule,
 		AnalyticsModule,
+		PredictionsModule,
 		AvatarsModule,
 		DashboardModule,
 		SettingsModule,

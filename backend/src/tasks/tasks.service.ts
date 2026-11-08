@@ -1,10 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { DependencyType, Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
+import { DependencyType, PredictionTrigger, Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
 import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { NotificationsService } from "../notifications/notifications.service";
+import { latestPredictionInclude, PredictionsService, StoredPrediction } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { ensureDefaultColumns, findColumnByStatus } from "../projects/project-columns.service";
@@ -34,7 +35,26 @@ const taskInclude = {
 		select: { id: true },
 	},
 	_count: { select: { comments: true, subtasks: true, attachments: true } },
+	...latestPredictionInclude,
 } satisfies Prisma.TaskInclude;
+
+/** Поля, от которых зависит прогноз: при их изменении пересчитываем его */
+const PREDICTION_FIELDS = new Set([
+	"title",
+	"description",
+	"type",
+	"priority",
+	"assigneeId",
+	"plannedStartAt",
+	"deadlineAt",
+]);
+
+function withPrediction<T extends { predictions: StoredPrediction[] }>(
+	task: T,
+	prediction: StoredPrediction | null,
+): T {
+	return prediction ? { ...task, predictions: [prediction] } : task;
+}
 
 @Injectable()
 export class TasksService {
@@ -43,6 +63,7 @@ export class TasksService {
 		private readonly projectAccess: ProjectAccessService,
 		private readonly notifications: NotificationsService,
 		private readonly access: AccessService,
+		private readonly predictions: PredictionsService,
 	) {}
 
 	async listByProject(user: AuthUser, projectId: string, query: TasksQueryDto) {
@@ -165,7 +186,8 @@ export class TasksService {
 			await this.notifications.notifyAssignee(dto.assigneeId, task.id, task.title);
 		}
 
-		return toTaskDto(task);
+		const prediction = await this.predictions.refresh(task.id, PredictionTrigger.CREATED);
+		return toTaskDto(withPrediction(task, prediction));
 	}
 
 	async update(user: AuthUser, taskId: string, dto: UpdateTaskDto) {
@@ -272,7 +294,9 @@ export class TasksService {
 			await this.notifications.notifyDeadlineChanged(updated, user.id);
 		}
 
-		return toTaskDto(updated);
+		const affectsPrediction = Boolean(dto.tagIds) || changes.some((change) => PREDICTION_FIELDS.has(change.fieldName));
+		const prediction = affectsPrediction ? await this.predictions.refresh(taskId, PredictionTrigger.UPDATED) : null;
+		return toTaskDto(withPrediction(updated, prediction));
 	}
 
 	async transition(user: AuthUser, taskId: string, dto: TransitionTaskDto) {
