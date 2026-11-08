@@ -26,6 +26,7 @@ describe("ProjectsService favorites", () => {
 		},
 		task: {
 			updateMany: jest.fn(),
+			findMany: jest.fn().mockResolvedValue([]),
 		},
 		taskCoAssignee: {
 			deleteMany: jest.fn(),

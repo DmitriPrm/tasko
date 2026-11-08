@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 
 /** Локальное хранилище; позже можно заменить на S3/MinIO, не меняя таблицу attachments */
@@ -61,4 +61,10 @@ export function resolveAttachmentPath(storageKey: string) {
 export function removeAttachmentFile(storageKey: string) {
 	const full = resolveAttachmentPath(storageKey);
 	if (full) unlinkSync(full);
+}
+
+/** Стереть все файлы задачи: вызывается при её удалении, строки в базе уходят каскадом */
+export function removeTaskAttachmentDir(taskId: string) {
+	if (!/^[0-9a-f-]{36}$/i.test(taskId)) return;
+	rmSync(path.join(ATTACHMENT_DIR, taskId), { recursive: true, force: true });
 }

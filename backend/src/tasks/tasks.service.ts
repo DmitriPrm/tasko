@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { DependencyType, Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
+import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { NotificationsService } from "../notifications/notifications.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -357,6 +358,7 @@ export class TasksService {
 		}
 
 		await this.prisma.task.delete({ where: { id: taskId } });
+		removeTaskAttachmentDir(taskId);
 		return { success: true, cancelled: false };
 	}
 

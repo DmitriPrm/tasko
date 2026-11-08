@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ProjectRole, ProjectStatus, SystemRole } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
+import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { AddMemberDto } from "./dto/add-member.dto";
@@ -130,7 +131,10 @@ export class ProjectsService {
 	async remove(user: AuthUser, projectId: string) {
 		await this.access.assert(user, "PROJECTS_ARCHIVE");
 		await this.projectAccess.assertCanManage(projectId, user);
+		const tasks = await this.prisma.task.findMany({ where: { projectId }, select: { id: true } });
 		await this.prisma.project.delete({ where: { id: projectId } });
+		// Файлы вложений живут на диске, каскад базы их не трогает
+		for (const task of tasks) removeTaskAttachmentDir(task.id);
 		return { success: true };
 	}
 
