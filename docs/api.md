@@ -41,9 +41,13 @@ Swagger: `http://localhost:3000/docs`
 - `GET/POST /tasks/:id/attachments` (multipart, поле `file`)
 - `GET /tasks/:id/attachments/:attachmentId/download`
 - `DELETE /tasks/:id/attachments/:attachmentId`
+- `GET /tasks/:id/prediction` — текущий прогноз (`forecast.source`: `ML` или `RULES`) и история пересчётов
+- `POST /tasks/:id/prediction` — пересчитать прогноз; `refreshed: false`, если ML-сервис недоступен
 - `DELETE /tasks/:id` — начатую задачу не удаляет, а переводит в `CANCELLED` (`{ cancelled: true }`)
 
 ## Other
+
+- `GET /ml/status` — подключён ли ML-сервис и какие модели активны (алгоритм, метрики на тесте)
 
 - `GET /dashboard`
 - `GET /notifications`
