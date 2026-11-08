@@ -49,7 +49,11 @@ def reference_row(features: pd.DataFrame) -> dict:
 
 
 def top_factors(predict, row: pd.DataFrame, reference: dict, limit: int = 3) -> list[dict]:
-	"""Вклад признака = прогноз − прогноз, если этот признак заменить на типичное значение."""
+	"""Вклад признака = прогноз − прогноз, если этот признак заменить на типичное значение.
+
+	value — значение признака у этой задачи (None — нет данных), чтобы интерфейс мог написать
+	«Нет исполнителя» вместо «Есть исполнитель».
+	"""
 	base = float(predict(row)[0])
 	impacts = []
 	for column in FEATURES:
@@ -60,8 +64,19 @@ def top_factors(predict, row: pd.DataFrame, reference: dict, limit: int = 3) -> 
 		changed[column] = reference[column]
 		impact = base - float(predict(changed)[0])
 		if abs(impact) > 1e-9:
-			impacts.append({"feature": column, "label": FEATURE_LABELS[column], "impact": round(impact, 4)})
+			impacts.append(
+				{"feature": column, "label": FEATURE_LABELS[column], "impact": round(impact, 4), "value": _plain(value)}
+			)
 	return sorted(impacts, key=lambda item: abs(item["impact"]), reverse=True)[:limit]
+
+
+def _plain(value: object) -> str | float | None:
+	"""Значение признака для ответа: None вместо NaN, обычное число вместо numpy."""
+	if value is None or pd.isna(value):
+		return None
+	if isinstance(value, str):
+		return value
+	return round(float(value), 4)
 
 
 class Predictor:

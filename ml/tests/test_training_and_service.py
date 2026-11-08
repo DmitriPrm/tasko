@@ -61,6 +61,7 @@ def test_service_returns_a_full_prediction(trained, monkeypatch):
 	assert body["durationModelVersion"].startswith("duration-")
 	assert body["riskModelVersion"].startswith("risk-")
 	assert 0 < len(body["topFactors"]) <= 3
+	assert all("value" in factor for factor in body["topFactors"])
 
 
 def test_service_validates_input_and_reports_missing_models(tmp_path, monkeypatch):
