@@ -19,7 +19,9 @@ ML-контур из спецификации отложен: отдельный
 
 ## Backend
 
-Модули NestJS: `auth`, `users`, `projects`, `tasks`, `comments`, `notifications`, `analytics`, `dashboard`.
+Модули NestJS: `auth`, `users`, `access` (права ролей), `invitations`, `projects`, `tasks` (задачи, подзадачи, зависимости), `attachments`, `comments`, `notifications` (в том числе ежечасные напоминания о сроке через `@nestjs/schedule`), `analytics`, `dashboard`, `settings`, `table-layouts`, `avatars`, `mail`.
+
+Файлы (аватары, вложения) лежат в `backend/storage/`; в базе хранятся только метаданные.
 
 Глобально: JWT guard, wrap-interceptor `{ data }`, exception filter без stack trace.
 

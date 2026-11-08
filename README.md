@@ -33,6 +33,23 @@ npm run dev
 - API: http://localhost:3000/api
 - Swagger: http://localhost:3000/docs
 
+## Проверки кода
+
+```bash
+cd backend
+npm run lint          # ESLint
+npm run format:check  # Prettier (npm run format — исправить)
+npm test              # Jest
+
+cd ../frontend
+npm run lint
+npm run format:check
+npm test              # Vitest
+npm run typecheck     # vue-tsc
+```
+
+Общие настройки форматирования — в `.prettierrc.json` и `.editorconfig` в корне.
+
 ## Демо-доступ
 
 Пароль для всех: `Password123!`

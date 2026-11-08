@@ -35,6 +35,13 @@ Swagger: `http://localhost:3000/docs`
 - `POST /tasks/:id/transitions`
 - `GET /tasks/:id/history`
 - `GET/POST /tasks/:id/comments`
+- `GET /tasks/:id/subtasks` (создание — `POST /projects/:id/tasks` с `parentTaskId`)
+- `GET/POST /tasks/:id/dependencies` — `{ taskId, kind: DEPENDS_ON | BLOCKS | RELATED }`
+- `DELETE /tasks/:id/dependencies/:dependencyId`
+- `GET/POST /tasks/:id/attachments` (multipart, поле `file`)
+- `GET /tasks/:id/attachments/:attachmentId/download`
+- `DELETE /tasks/:id/attachments/:attachmentId`
+- `DELETE /tasks/:id` — начатую задачу не удаляет, а переводит в `CANCELLED` (`{ cancelled: true }`)
 
 ## Other
 
