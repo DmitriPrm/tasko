@@ -65,11 +65,7 @@ const handleSubmit = async () => {
 		<base-form @submit="handleSubmit">
 			<template #actions>
 				<base-flex align="center" justify="space-between" :gap="3">
-					<base-form-actions
-						:submit-label="translate('common.save')"
-						:loading="isSubmitting"
-						@cancel="handleCancel"
-					/>
+					<base-form-actions :submit-label="translate('common.save')" :loading="isSubmitting" @cancel="handleCancel" />
 					<base-button type="danger" text :loading="isDeleting" @click="handleDelete">
 						{{ translate("project.delete") }}
 					</base-button>

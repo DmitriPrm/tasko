@@ -132,12 +132,7 @@ const projectRoleLabel = (role: string) => (role === "MANAGER" ? roleLabel("PROJ
 						<el-option :label="roleLabel('PROJECT_MANAGER')" value="MANAGER" />
 						<el-option :label="roleLabel('MEMBER')" value="MEMBER" />
 					</el-select>
-					<base-button
-						type="primary"
-						native-type="submit"
-						:loading="isInviting"
-						:disabled="!isEmailValid"
-					>
+					<base-button type="primary" native-type="submit" :loading="isInviting" :disabled="!isEmailValid">
 						{{ translate("invitation.invite") }}
 					</base-button>
 				</base-flex>
@@ -151,8 +146,8 @@ const projectRoleLabel = (role: string) => (role === "MANAGER" ? roleLabel("PROJ
 						<span class="project-members__pending-main">
 							<strong>{{ invitation.email }}</strong>
 							<span>
-								{{ projectRoleLabel(invitation.projectRole) }} ·
-								{{ translate("invitation.until") }} {{ formatDate(invitation.expiresAt) }}
+								{{ projectRoleLabel(invitation.projectRole) }} · {{ translate("invitation.until") }}
+								{{ formatDate(invitation.expiresAt) }}
 								<template v-if="isExpired(invitation)"> · {{ translate("invitation.expired") }}</template>
 							</span>
 						</span>

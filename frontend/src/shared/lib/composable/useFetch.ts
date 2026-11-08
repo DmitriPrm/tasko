@@ -56,11 +56,8 @@ export function useFetch<State = any, Root = any>(
 	options?: IFetchOptions<Root, State>,
 ) {
 	const actualOptions =
-		typeof selector === "string" || typeof selector === "function" || selector == null
-			? options || {}
-			: selector;
-	const actualSelector =
-		typeof selector === "string" || typeof selector === "function" ? selector : undefined;
+		typeof selector === "string" || typeof selector === "function" || selector == null ? options || {} : selector;
+	const actualSelector = typeof selector === "string" || typeof selector === "function" ? selector : undefined;
 
 	const {
 		immediate = false,
@@ -116,12 +113,7 @@ export function useFetch<State = any, Root = any>(
 
 			const requestFn = unref(fn);
 			const response = isMethod(requestFn)
-				? await requestFn(
-						merged.pathParams || {},
-						merged.params || {},
-						merged.payload,
-						controller.signal,
-					)
+				? await requestFn(merged.pathParams || {}, merged.params || {}, merged.payload, controller.signal)
 				: await requestFn(merged);
 
 			const nextState = pickBySelector(response.data, actualSelector, response.config?.url);

@@ -84,9 +84,7 @@ export class NotificationsService {
 	}
 
 	async notifyDeadlineChanged(task: Task, actorId: string) {
-		const recipientIds = [task.assigneeId, task.authorId].filter(
-			(id): id is string => Boolean(id) && id !== actorId,
-		);
+		const recipientIds = [task.assigneeId, task.authorId].filter((id): id is string => Boolean(id) && id !== actorId);
 
 		await this.prisma.notification.createMany({
 			data: recipientIds.map((userId) => ({
@@ -99,15 +97,8 @@ export class NotificationsService {
 		});
 	}
 
-	async notifyStatusChanged(
-		task: Task,
-		actorId: string,
-		fromStatus: TaskStatus,
-		toStatus: TaskStatus,
-	) {
-		const recipientIds = [task.assigneeId, task.authorId].filter(
-			(id): id is string => Boolean(id) && id !== actorId,
-		);
+	async notifyStatusChanged(task: Task, actorId: string, fromStatus: TaskStatus, toStatus: TaskStatus) {
+		const recipientIds = [task.assigneeId, task.authorId].filter((id): id is string => Boolean(id) && id !== actorId);
 
 		await this.prisma.notification.createMany({
 			data: recipientIds.map((userId) => ({

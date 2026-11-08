@@ -1,6 +1,17 @@
+import { z } from "zod";
+
 import { createDelete, createGet, createPatch, createPost } from "@/shared/api/helpers/api";
 import { ZWrapDTO } from "@/shared/api/helpers/ZWrapDTO";
-import { ZFormSchema, ZPaginated, ZSuccess, ZTask, ZTaskHistory } from "@/shared/api/v0/schemas";
+import {
+	ZBriefTask,
+	ZFormSchema,
+	ZPaginated,
+	ZTask,
+	ZTaskDependencies,
+	ZTaskHistory,
+	ZTaskPrediction,
+	ZTaskRemoveResult,
+} from "@/shared/api/v0/schemas";
 
 export const getTasks = createGet({
 	path: "/tasks",
@@ -39,7 +50,7 @@ export const updateTask = createPatch({
 
 export const deleteTask = createDelete({
 	path: "/tasks/:id",
-	type: ZWrapDTO(ZSuccess),
+	type: ZWrapDTO(ZTaskRemoveResult),
 });
 
 export const transitionTask = createPost({
@@ -50,4 +61,34 @@ export const transitionTask = createPost({
 export const getTaskHistory = createGet({
 	path: "/tasks/:id/history",
 	type: ZWrapDTO(ZTaskHistory),
+});
+
+export const getSubtasks = createGet({
+	path: "/tasks/:id/subtasks",
+	type: ZWrapDTO(z.array(ZBriefTask)),
+});
+
+export const getTaskDependencies = createGet({
+	path: "/tasks/:id/dependencies",
+	type: ZWrapDTO(ZTaskDependencies),
+});
+
+export const addTaskDependency = createPost({
+	path: "/tasks/:id/dependencies",
+	type: ZWrapDTO(ZTaskDependencies),
+});
+
+export const removeTaskDependency = createDelete({
+	path: "/tasks/:id/dependencies/:dependencyId",
+	type: ZWrapDTO(ZTaskDependencies),
+});
+
+export const getTaskPrediction = createGet({
+	path: "/tasks/:id/prediction",
+	type: ZWrapDTO(ZTaskPrediction),
+});
+
+export const refreshTaskPrediction = createPost({
+	path: "/tasks/:id/prediction",
+	type: ZWrapDTO(ZTaskPrediction),
 });

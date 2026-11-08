@@ -48,11 +48,27 @@ enum TaskStatus {
 }
 
 enum NotificationType {
-	TASK_ASSIGNED
-	DEADLINE_CHANGED
-	STATUS_CHANGED
-	DEADLINE_APPROACHING
-	PROJECT_INVITATION
+  TASK_ASSIGNED
+  DEADLINE_CHANGED
+  STATUS_CHANGED
+  DEADLINE_APPROACHING
+  PROJECT_INVITATION
+}
+
+enum DependencyType {
+  BLOCKS
+  RELATED
+}
+
+enum ModelKind {
+  DURATION
+  RISK
+}
+
+enum PredictionTrigger {
+  CREATED
+  UPDATED
+  MANUAL
 }
 
 enum InvitationStatus {
@@ -63,45 +79,47 @@ enum InvitationStatus {
 }
 
 enum ProfileFieldType {
-	TEXT
-	TEXTAREA
-	NUMBER
-	DATE
-	CHECKBOX
-	SELECT
-	MULTI_SELECT
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  CHECKBOX
+  SELECT
+  MULTI_SELECT
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  fullName     String     @map("full_name")
-  avatarFile   String?    @map("avatar_file")
-  systemRole   SystemRole @default(EXECUTOR) @map("system_role")
-  isActive     Boolean    @default(true) @map("is_active")
-  emailVerifiedAt DateTime? @map("email_verified_at")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  fullName        String     @map("full_name")
+  avatarFile      String?    @map("avatar_file")
+  systemRole      SystemRole @default(EXECUTOR) @map("system_role")
+  isActive        Boolean    @default(true) @map("is_active")
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  ownedProjects      Project[]            @relation("ProjectOwner")
-  memberships        ProjectMember[]
-  authoredTasks      Task[]               @relation("TaskAuthor")
-  assignedTasks      Task[]               @relation("TaskAssignee")
-  coAssignedTasks    TaskCoAssignee[]
-  favorites          ProjectFavorite[]
-  statusChanges      TaskStatusHistory[]
-  fieldChanges       TaskChangeHistory[]
-	comments           Comment[]
-	notifications      Notification[]
-	permissions        UserPermission[]
-	profileSections    ProfileSection[]
-	tableLayouts       UserTableLayout[]
-	emailTokens        EmailVerificationToken[]
-	sentInvitations    ProjectInvitation[]  @relation("InvitationInviter")
-	receivedInvitations ProjectInvitation[] @relation("InvitationInvitee")
+  ownedProjects       Project[]                @relation("ProjectOwner")
+  memberships         ProjectMember[]
+  authoredTasks       Task[]                   @relation("TaskAuthor")
+  assignedTasks       Task[]                   @relation("TaskAssignee")
+  coAssignedTasks     TaskCoAssignee[]
+  favorites           ProjectFavorite[]
+  statusChanges       TaskStatusHistory[]
+  fieldChanges        TaskChangeHistory[]
+  comments            Comment[]
+  attachments         Attachment[]
+  createdDependencies TaskDependency[]
+  notifications       Notification[]
+  permissions         UserPermission[]
+  profileSections     ProfileSection[]
+  tableLayouts        UserTableLayout[]
+  emailTokens         EmailVerificationToken[]
+  sentInvitations     ProjectInvitation[]      @relation("InvitationInviter")
+  receivedInvitations ProjectInvitation[]      @relation("InvitationInvitee")
 
-	@@map("users")
+  @@map("users")
 }
 
 model Project {
@@ -115,13 +133,13 @@ model Project {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  owner     User              @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members   ProjectMember[]
-  tasks     Task[]
-  favorites ProjectFavorite[]
-  tags      Tag[]
+  owner       User                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  tasks       Task[]
+  favorites   ProjectFavorite[]
+  tags        Tag[]
   invitations ProjectInvitation[]
-  columns   ProjectColumn[]
+  columns     ProjectColumn[]
 
   @@map("projects")
 }
@@ -204,18 +222,22 @@ model Task {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  author         User                @relation("TaskAuthor", fields: [authorId], references: [id])
-  assignee       User?               @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  column         ProjectColumn?      @relation(fields: [columnId], references: [id], onDelete: SetNull)
-  parentTask     Task?               @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
-  subtasks       Task[]              @relation("TaskSubtasks")
-  tags           TaskTag[]
-  coAssignees    TaskCoAssignee[]
-  statusHistory  TaskStatusHistory[]
-  changeHistory  TaskChangeHistory[]
-  comments       Comment[]
-  notifications  Notification[]
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author          User                @relation("TaskAuthor", fields: [authorId], references: [id])
+  assignee        User?               @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  column          ProjectColumn?      @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  parentTask      Task?               @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks        Task[]              @relation("TaskSubtasks")
+  tags            TaskTag[]
+  coAssignees     TaskCoAssignee[]
+  statusHistory   TaskStatusHistory[]
+  changeHistory   TaskChangeHistory[]
+  comments        Comment[]
+  attachments     Attachment[]
+  notifications   Notification[]
+  dependenciesOut TaskDependency[]    @relation("DependencySource")
+  dependenciesIn  TaskDependency[]    @relation("DependencyTarget")
+  predictions     TaskPrediction[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -247,16 +269,16 @@ model TaskCoAssignee {
 }
 
 model TaskStatusHistory {
-  id        String     @id @default(uuid())
-  taskId    String     @map("task_id")
+  id         String      @id @default(uuid())
+  taskId     String      @map("task_id")
   fromStatus TaskStatus? @map("from_status")
-  toStatus  TaskStatus @map("to_status")
-  changedBy String     @map("changed_by")
-  changedAt DateTime   @default(now()) @map("changed_at")
-  comment   String?
+  toStatus   TaskStatus  @map("to_status")
+  changedBy  String      @map("changed_by")
+  changedAt  DateTime    @default(now()) @map("changed_at")
+  comment    String?
 
-  task    Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  actor   User @relation(fields: [changedBy], references: [id])
+  task  Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [changedBy], references: [id])
 
   @@map("task_status_history")
 }
@@ -274,6 +296,84 @@ model TaskChangeHistory {
   actor User @relation(fields: [changedBy], references: [id])
 
   @@map("task_change_history")
+}
+
+model TaskDependency {
+  id           String         @id @default(uuid())
+  /// BLOCKS: source блокирует target (target зависит от source). RELATED: симметричная связь
+  sourceTaskId String         @map("source_task_id")
+  targetTaskId String         @map("target_task_id")
+  type         DependencyType
+  createdBy    String         @map("created_by")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  source  Task @relation("DependencySource", fields: [sourceTaskId], references: [id], onDelete: Cascade)
+  target  Task @relation("DependencyTarget", fields: [targetTaskId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@unique([sourceTaskId, targetTaskId])
+  @@index([targetTaskId])
+  @@map("task_dependencies")
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  taskId       String   @map("task_id")
+  uploadedBy   String   @map("uploaded_by")
+  originalName String   @map("original_name")
+  /// Путь относительно storage/attachments; сам файл в базе не хранится
+  storageKey   String   @map("storage_key")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@map("attachments")
+}
+
+/// Версия ML-модели, которая хоть раз дала прогноз. Сведения берутся из /models/info сервиса прогноза
+model ModelVersion {
+  id         String    @id @default(uuid())
+  kind       ModelKind
+  version    String    @unique
+  algorithm  String
+  trainedAt  DateTime? @map("trained_at")
+  sampleSize Int?      @map("sample_size")
+  dataSource String?   @map("data_source")
+  /// Метрики на тестовой выборке (MAE, ROC-AUC и т. д.)
+  metrics    Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  durationPredictions TaskPrediction[] @relation("PredictionDurationModel")
+  riskPredictions     TaskPrediction[] @relation("PredictionRiskModel")
+
+  @@map("model_versions")
+}
+
+/// Прогноз ML-сервиса по задаче. Хранится каждый пересчёт; в интерфейсе показывается последний
+model TaskPrediction {
+  id              String            @id @default(uuid())
+  taskId          String            @map("task_id")
+  trigger         PredictionTrigger
+  durationHours   Float?            @map("duration_hours")
+  riskProbability Float?            @map("risk_probability")
+  durationModelId String?           @map("duration_model_id")
+  riskModelId     String?           @map("risk_model_id")
+  /// Главные факторы: { risk: [...], duration: [...] }
+  factors         Json
+  /// Что было отправлено в модель (без имён и email) — для воспроизводимости
+  input           Json
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  task          Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  durationModel ModelVersion? @relation("PredictionDurationModel", fields: [durationModelId], references: [id], onDelete: SetNull)
+  riskModel     ModelVersion? @relation("PredictionRiskModel", fields: [riskModelId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@map("task_predictions")
 }
 
 model Comment {
@@ -303,28 +403,28 @@ model Notification {
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   task Task? @relation(fields: [relatedTaskId], references: [id], onDelete: SetNull)
 
-	@@index([userId, isRead])
-	@@map("notifications")
+  @@index([userId, isRead])
+  @@map("notifications")
 }
 
 model RolePermission {
-	role    SystemRole
-	code    String
-	enabled Boolean    @default(true)
+  role    SystemRole
+  code    String
+  enabled Boolean    @default(true)
 
-	@@id([role, code])
-	@@map("role_permissions")
+  @@id([role, code])
+  @@map("role_permissions")
 }
 
 model UserPermission {
-	userId  String  @map("user_id")
-	code    String
-	enabled Boolean
+  userId  String  @map("user_id")
+  code    String
+  enabled Boolean
 
-	user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-	@@id([userId, code])
-	@@map("user_permissions")
+  @@id([userId, code])
+  @@map("user_permissions")
 }
 
 /// Раздел профиля, который пользователь создаёт сам
@@ -335,7 +435,7 @@ model ProfileSection {
   position  Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
 
-  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   fields ProfileCustomField[]
 
   @@index([userId, position])
@@ -361,17 +461,17 @@ model ProfileCustomField {
 }
 
 model UserTableLayout {
-	id        String   @id @default(uuid())
-	userId    String   @map("user_id")
-	code      String
-	widths    Json
-	createdAt DateTime @default(now()) @map("created_at")
-	updatedAt DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  code      String
+  widths    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-	user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-	@@unique([userId, code])
-	@@map("user_table_layouts")
+  @@unique([userId, code])
+  @@map("user_table_layouts")
 }
 
 model EmailVerificationToken {
@@ -400,9 +500,9 @@ model ProjectInvitation {
   createdAt   DateTime         @default(now()) @map("created_at")
   respondedAt DateTime?        @map("responded_at")
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  invitedBy User  @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
-  invitee   User? @relation("InvitationInvitee", fields: [inviteeId], references: [id], onDelete: SetNull)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitee   User?   @relation("InvitationInvitee", fields: [inviteeId], references: [id], onDelete: SetNull)
 
   @@index([projectId, status])
   @@index([email, status])

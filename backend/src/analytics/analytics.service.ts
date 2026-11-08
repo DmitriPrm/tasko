@@ -6,6 +6,7 @@ import { publicAvatarUrl } from "../common/avatar/files";
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
+import { latestPredictionInclude } from "../predictions/predictions.service";
 import { buildForecast } from "../tasks/forecast";
 
 @Injectable()
@@ -18,7 +19,7 @@ export class AnalyticsService {
 	async overview(user: AuthUser, projectId: string) {
 		await this.projectAccess.assertCanView(projectId, user);
 
-		const tasks = await this.prisma.task.findMany({ where: { projectId } });
+		const tasks = await this.prisma.task.findMany({ where: { projectId }, include: latestPredictionInclude });
 		const now = new Date();
 
 		const byStatus = Object.values(TaskStatus).reduce(
@@ -45,10 +46,7 @@ export class AnalyticsService {
 
 		const durations = completed
 			.filter((task) => task.actualStartAt && task.completedAt)
-			.map(
-				(task) =>
-					(task.completedAt!.getTime() - task.actualStartAt!.getTime()) / (1000 * 60 * 60),
-			)
+			.map((task) => (task.completedAt!.getTime() - task.actualStartAt!.getTime()) / (1000 * 60 * 60))
 			.sort((a, b) => a - b);
 
 		const averageDurationHours = durations.length

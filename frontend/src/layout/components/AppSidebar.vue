@@ -18,7 +18,7 @@ const layoutStore = useLayoutStore();
 const localeStore = useLocaleStore();
 
 const items = computed(() => {
-	localeStore.locale;
+	void localeStore.locale; // пересчитать при смене языка
 	const list: { name: string; label: string; icon: Component }[] = [
 		{ name: "dashboard", label: translate("nav.dashboard"), icon: Grid },
 		{ name: "tasks", label: translate("nav.tasks"), icon: CircleCheck },

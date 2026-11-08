@@ -19,7 +19,15 @@ import type { ProjectColumn, ProjectMember, Task, TaskPriority, TaskStatus, User
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { isTaskOverdue } from "@/shared/lib/helpers/formatDate";
-import { priorityLabel, projectStatusDot, projectStatusLabel, statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
+import {
+	PRIORITY_RANK,
+	priorityLabel,
+	projectStatusDot,
+	projectStatusLabel,
+	statusLabel,
+	STATUS_RANK,
+	statusTagType,
+} from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
@@ -187,8 +195,8 @@ const handleChangeDeadline = ({ taskId, deadlineAt }: { taskId: string; deadline
 
 const taskColumns = computed(() => [
 	{ key: "title", label: translate("task.name") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 
@@ -265,7 +273,7 @@ useOnTaskChange({ reload: () => handleReload() });
 				</base-button>
 			</base-flex>
 		</template>
-		<el-tabs class="project-page__tabs" v-model="activeTab">
+		<el-tabs v-model="activeTab" class="project-page__tabs">
 			<el-tab-pane :label="translate('project.tasks')" name="tasks">
 				<project-tasks-toolbar
 					:search="search"
@@ -303,7 +311,13 @@ useOnTaskChange({ reload: () => handleReload() });
 					@change-assignee="handleChangeAssignee"
 					@change-deadline="handleChangeDeadline"
 				/>
-				<base-table v-else code="project-tasks" :rows="visibleTasks" :columns="taskColumns" @row-click="handleTaskClick">
+				<base-table
+					v-else
+					code="project-tasks"
+					:rows="visibleTasks"
+					:columns="taskColumns"
+					@row-click="handleTaskClick"
+				>
 					<template #status="{ row }">
 						<el-tag :type="statusTagType[row.status]" size="small">{{ statusLabel(row.status) }}</el-tag>
 					</template>
@@ -314,12 +328,7 @@ useOnTaskChange({ reload: () => handleReload() });
 				</base-table>
 			</el-tab-pane>
 			<el-tab-pane :label="translate('project.members')" name="members">
-				<project-members
-					:project-id="projectId"
-					:members="members"
-					:can-manage="canManage"
-					@changed="handleReload"
-				/>
+				<project-members :project-id="projectId" :members="members" :can-manage="canManage" @changed="handleReload" />
 			</el-tab-pane>
 			<el-tab-pane
 				v-if="authStore.hasPermission('ANALYTICS_VIEW')"

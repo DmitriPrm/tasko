@@ -60,7 +60,9 @@ const isSameLayout = (groups: Record<string, Task[]>) =>
 	props.columns.every((column) => {
 		const next = groups[column.id] ?? [];
 		const current = lists.value[column.id];
-		return current && current.length === next.length && next.every((task) => current.some((item) => item.id === task.id));
+		return (
+			current && current.length === next.length && next.every((task) => current.some((item) => item.id === task.id))
+		);
 	}) && Object.keys(lists.value).length === props.columns.length;
 
 const applyTasks = (tasks: Task[]) => {

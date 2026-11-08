@@ -1,14 +1,11 @@
-import {
-	BadRequestException,
-	ForbiddenException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
-import { Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { DependencyType, PredictionTrigger, Prisma, ProjectRole, SystemRole, TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
+import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { NotificationsService } from "../notifications/notifications.service";
+import { latestPredictionInclude, PredictionsService, StoredPrediction } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { ensureDefaultColumns, findColumnByStatus } from "../projects/project-columns.service";
@@ -16,9 +13,11 @@ import { CreateTaskDto } from "./dto/create-task.dto";
 import { TasksQueryDto } from "./dto/tasks-query.dto";
 import { TransitionTaskDto } from "./dto/transition-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
-import { TASK_TRANSITIONS } from "./task.constants";
+import { isTaskStarted, TASK_TRANSITIONS } from "./task.constants";
 import { getTaskFields } from "./task.form";
 import { toTaskDto } from "./task.mapper";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const taskInclude = {
 	author: true,
@@ -26,8 +25,36 @@ const taskInclude = {
 	project: { select: { id: true, name: true, status: true } },
 	tags: { include: { tag: true } },
 	coAssignees: { include: { user: true } },
-	_count: { select: { comments: true, subtasks: true } },
+	parentTask: { select: { id: true, title: true } },
+	// Незакрытые задачи, которые блокируют эту: по ним карточка показывает замок
+	dependenciesIn: {
+		where: {
+			type: DependencyType.BLOCKS,
+			source: { status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] }, isCompleted: false },
+		},
+		select: { id: true },
+	},
+	_count: { select: { comments: true, subtasks: true, attachments: true } },
+	...latestPredictionInclude,
 } satisfies Prisma.TaskInclude;
+
+/** Поля, от которых зависит прогноз: при их изменении пересчитываем его */
+const PREDICTION_FIELDS = new Set([
+	"title",
+	"description",
+	"type",
+	"priority",
+	"assigneeId",
+	"plannedStartAt",
+	"deadlineAt",
+]);
+
+function withPrediction<T extends { predictions: StoredPrediction[] }>(
+	task: T,
+	prediction: StoredPrediction | null,
+): T {
+	return prediction ? { ...task, predictions: [prediction] } : task;
+}
 
 @Injectable()
 export class TasksService {
@@ -36,6 +63,7 @@ export class TasksService {
 		private readonly projectAccess: ProjectAccessService,
 		private readonly notifications: NotificationsService,
 		private readonly access: AccessService,
+		private readonly predictions: PredictionsService,
 	) {}
 
 	async listByProject(user: AuthUser, projectId: string, query: TasksQueryDto) {
@@ -53,12 +81,8 @@ export class TasksService {
 			...(query.status ? { status: query.status } : {}),
 			...(query.priority ? { priority: query.priority } : {}),
 			...(query.type ? { type: query.type } : {}),
-			...(query.search
-				? { title: { contains: query.search, mode: "insensitive" } }
-				: {}),
-			...(user.systemRole === SystemRole.ADMIN
-				? {}
-				: { project: { members: { some: { userId: user.id } } } }),
+			...(query.search ? { title: { contains: query.search, mode: "insensitive" } } : {}),
+			...(user.systemRole === SystemRole.ADMIN ? {} : { project: { members: { some: { userId: user.id } } } }),
 		};
 
 		const orderBy = this.buildOrderBy(query.sortBy, query.sortOrder);
@@ -162,7 +186,8 @@ export class TasksService {
 			await this.notifications.notifyAssignee(dto.assigneeId, task.id, task.title);
 		}
 
-		return toTaskDto(task);
+		const prediction = await this.predictions.refresh(task.id, PredictionTrigger.CREATED);
+		return toTaskDto(withPrediction(task, prediction));
 	}
 
 	async update(user: AuthUser, taskId: string, dto: UpdateTaskDto) {
@@ -178,10 +203,8 @@ export class TasksService {
 		}
 
 		this.assertDates(
-			dto.plannedStartAt === undefined
-				? task.plannedStartAt?.toISOString()
-				: dto.plannedStartAt ?? undefined,
-			dto.deadlineAt === undefined ? task.deadlineAt?.toISOString() : dto.deadlineAt ?? undefined,
+			dto.plannedStartAt === undefined ? task.plannedStartAt?.toISOString() : (dto.plannedStartAt ?? undefined),
+			dto.deadlineAt === undefined ? task.deadlineAt?.toISOString() : (dto.deadlineAt ?? undefined),
 			task.createdAt,
 		);
 
@@ -234,13 +257,8 @@ export class TasksService {
 				isCompleted: dto.isCompleted,
 				completedAt: this.resolveCompletedAt(task, dto.isCompleted),
 				plannedStartAt:
-					dto.plannedStartAt === undefined
-						? undefined
-						: dto.plannedStartAt
-							? new Date(dto.plannedStartAt)
-							: null,
-				deadlineAt:
-					dto.deadlineAt === undefined ? undefined : dto.deadlineAt ? new Date(dto.deadlineAt) : null,
+					dto.plannedStartAt === undefined ? undefined : dto.plannedStartAt ? new Date(dto.plannedStartAt) : null,
+				deadlineAt: dto.deadlineAt === undefined ? undefined : dto.deadlineAt ? new Date(dto.deadlineAt) : null,
 				changeHistory: {
 					create: changes.map((change) => ({
 						...change,
@@ -276,7 +294,9 @@ export class TasksService {
 			await this.notifications.notifyDeadlineChanged(updated, user.id);
 		}
 
-		return toTaskDto(updated);
+		const affectsPrediction = Boolean(dto.tagIds) || changes.some((change) => PREDICTION_FIELDS.has(change.fieldName));
+		const prediction = affectsPrediction ? await this.predictions.refresh(taskId, PredictionTrigger.UPDATED) : null;
+		return toTaskDto(withPrediction(updated, prediction));
 	}
 
 	async transition(user: AuthUser, taskId: string, dto: TransitionTaskDto) {
@@ -314,10 +334,7 @@ export class TasksService {
 			data: {
 				status: nextStatus,
 				columnId: column?.id,
-				actualStartAt:
-					nextStatus === TaskStatus.IN_PROGRESS && !task.actualStartAt
-						? new Date()
-						: task.actualStartAt,
+				actualStartAt: nextStatus === TaskStatus.IN_PROGRESS && !task.actualStartAt ? new Date() : task.actualStartAt,
 				completedAt: nextStatus === TaskStatus.DONE ? new Date() : task.completedAt,
 				statusHistory: {
 					create: {
@@ -339,8 +356,34 @@ export class TasksService {
 		await this.access.assert(user, "TASKS_DELETE");
 		const task = await this.getTaskOrThrow(taskId);
 		await this.assertCanEdit(user, task.projectId, task.authorId);
+
+		// Начатую задачу не стираем: её история нужна для аудита и обучающей выборки
+		if (isTaskStarted(task)) {
+			if (task.status !== TaskStatus.CANCELLED) {
+				const column = await this.resolveColumnByStatus(task.projectId, TaskStatus.CANCELLED);
+				const cancelled = await this.prisma.task.update({
+					where: { id: taskId },
+					data: {
+						status: TaskStatus.CANCELLED,
+						columnId: column?.id,
+						statusHistory: {
+							create: {
+								fromStatus: task.status,
+								toStatus: TaskStatus.CANCELLED,
+								changedBy: user.id,
+								comment: "Отменена вместо удаления",
+							},
+						},
+					},
+				});
+				await this.notifications.notifyStatusChanged(cancelled, user.id, task.status, TaskStatus.CANCELLED);
+			}
+			return { success: true, cancelled: true };
+		}
+
 		await this.prisma.task.delete({ where: { id: taskId } });
-		return { success: true };
+		removeTaskAttachmentDir(taskId);
+		return { success: true, cancelled: false };
 	}
 
 	async history(user: AuthUser, taskId: string) {
@@ -360,6 +403,20 @@ export class TasksService {
 			}),
 		]);
 
+		// В истории исполнитель хранится как id; для показа подставляем имя
+		const userIds = new Set<string>();
+		for (const item of changeHistory) {
+			if (item.fieldName !== "assigneeId") continue;
+			if (item.oldValue) userIds.add(item.oldValue);
+			if (item.newValue) userIds.add(item.newValue);
+		}
+		const users = userIds.size
+			? await this.prisma.user.findMany({ where: { id: { in: [...userIds] } }, select: { id: true, fullName: true } })
+			: [];
+		const names = new Map(users.map((item) => [item.id, item.fullName]));
+		const display = (fieldName: string, value: string | null) =>
+			fieldName === "assigneeId" && value ? (names.get(value) ?? value) : value;
+
 		return {
 			statusHistory: statusHistory.map((item) => ({
 				id: item.id,
@@ -375,8 +432,8 @@ export class TasksService {
 			changeHistory: changeHistory.map((item) => ({
 				id: item.id,
 				fieldName: item.fieldName,
-				oldValue: item.oldValue,
-				newValue: item.newValue,
+				oldValue: display(item.fieldName, item.oldValue),
+				newValue: display(item.fieldName, item.newValue),
 				changedAt: item.changedAt.toISOString(),
 				actor: {
 					id: item.actor.id,
@@ -384,6 +441,21 @@ export class TasksService {
 				},
 			})),
 		};
+	}
+
+	/** Задача, которую пользователь может смотреть (для связей, подзадач, вложений) */
+	async getViewableTask(user: AuthUser, taskId: string) {
+		const task = await this.getTaskOrThrow(taskId);
+		await this.projectAccess.assertCanView(task.projectId, user);
+		return task;
+	}
+
+	/** Задача, которую пользователь может менять: те же права, что на редактирование полей */
+	async getEditableTask(user: AuthUser, taskId: string) {
+		await this.access.assert(user, "TASKS_EDIT");
+		const task = await this.getTaskOrThrow(taskId);
+		await this.assertCanEdit(user, task.projectId, task.authorId);
+		return task;
 	}
 
 	/** Колонка для новой/перенесённой задачи: указанная или первая «К выполнению» */
@@ -417,9 +489,9 @@ export class TasksService {
 	}
 
 	private async assertAssignee(projectId: string, userId: string) {
-		const isMember = await this.projectAccess.isProjectMember(projectId, userId);
+		const isMember = await this.projectAccess.isActiveProjectMember(projectId, userId);
 		if (!isMember) {
-			throw new BadRequestException("Исполнителем может быть только участник проекта");
+			throw new BadRequestException("Исполнителем может быть только активный участник проекта");
 		}
 	}
 
@@ -460,21 +532,16 @@ export class TasksService {
 		throw new ForbiddenException("Недостаточно прав для смены статуса");
 	}
 
-	private resolveCompletedAt(
-		task: { status: TaskStatus; completedAt: Date | null },
-		isCompleted?: boolean,
-	) {
+	private resolveCompletedAt(task: { status: TaskStatus; completedAt: Date | null }, isCompleted?: boolean) {
 		if (isCompleted === undefined) return undefined;
 		if (isCompleted) return task.completedAt ?? new Date();
 		return task.status === TaskStatus.DONE ? task.completedAt : null;
 	}
 
-	private assertDates(
-		plannedStartAt?: string | null,
-		deadlineAt?: string | null,
-		createdAt?: Date,
-	) {
-		if (deadlineAt && createdAt && new Date(deadlineAt) < createdAt) {
+	private assertDates(plannedStartAt?: string | null, deadlineAt?: string | null, createdAt: Date = new Date()) {
+		// Дата из календаря приходит как начало дня в поясе пользователя, поэтому сравниваем с запасом в сутки:
+		// срок «сегодня» допустим в любом часовом поясе, а вчерашний — нет
+		if (deadlineAt && new Date(deadlineAt).getTime() < createdAt.getTime() - DAY_MS) {
 			throw new BadRequestException("Дедлайн не может быть раньше даты создания");
 		}
 

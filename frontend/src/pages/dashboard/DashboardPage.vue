@@ -42,17 +42,17 @@ useOnTaskChange({ reload: () => fetch() });
 			<base-flex direction="column" :gap="6">
 				<base-flex :gap="4" wrap="wrap">
 					<base-card
-											v-for="card in summaryCards"
-											:key="card.key"
-											class="dashboard-page__summary"
-											:class="`dashboard-page__summary--${card.key}`"
-										>
-											<el-icon class="dashboard-page__summary-icon" :size="20" aria-hidden="true">
-												<component :is="card.icon" />
-											</el-icon>
-											<span>{{ card.label }}</span>
-											<strong>{{ card.value }}</strong>
-										</base-card>
+						v-for="card in summaryCards"
+						:key="card.key"
+						class="dashboard-page__summary"
+						:class="`dashboard-page__summary--${card.key}`"
+					>
+						<el-icon class="dashboard-page__summary-icon" :size="20" aria-hidden="true">
+							<component :is="card.icon" />
+						</el-icon>
+						<span>{{ card.label }}</span>
+						<strong>{{ card.value }}</strong>
+					</base-card>
 				</base-flex>
 				<section class="dashboard-page__section">
 					<h3>{{ translate("dashboard.projects") }}</h3>
@@ -68,10 +68,7 @@ useOnTaskChange({ reload: () => fetch() });
 							<base-flex direction="column" :gap="2">
 								<strong>{{ project.name }}</strong>
 								<base-flex class="dashboard-page__status" align="center" :gap="2">
-									<span
-										class="dashboard-page__dot"
-										:style="{ background: projectStatusDot[project.status] }"
-									/>
+									<span class="dashboard-page__dot" :style="{ background: projectStatusDot[project.status] }" />
 									<span>{{ projectStatusLabel(project.status) }}</span>
 								</base-flex>
 								<base-flex class="dashboard-page__count" align="center" :gap="2">

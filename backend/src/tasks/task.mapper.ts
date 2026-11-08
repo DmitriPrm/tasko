@@ -2,7 +2,8 @@ import { Project, Tag, Task, User } from "@prisma/client";
 
 import { toTagDto } from "../projects/project.mapper";
 import { toUserDto } from "../users/user.mapper";
-import { buildForecast } from "./forecast";
+import { buildForecast, ForecastPrediction } from "./forecast";
+import { isTaskStarted } from "./task.constants";
 
 type TaskWithRelations = Task & {
 	author: User;
@@ -10,7 +11,10 @@ type TaskWithRelations = Task & {
 	project?: Pick<Project, "id" | "name" | "status">;
 	tags?: { tag: Tag }[];
 	coAssignees?: { user: User }[];
-	_count?: { comments: number; subtasks: number };
+	parentTask?: { id: string; title: string } | null;
+	dependenciesIn?: { id: string }[];
+	_count?: { comments: number; subtasks: number; attachments?: number };
+	predictions?: ForecastPrediction[];
 };
 
 export function toTaskDto(task: TaskWithRelations) {
@@ -37,11 +41,13 @@ export function toTaskDto(task: TaskWithRelations) {
 		assignee: task.assignee ? toUserDto(task.assignee) : null,
 		coAssignees: task.coAssignees?.map((item) => toUserDto(item.user)) ?? [],
 		tags: task.tags?.map((item) => toTagDto(item.tag)) ?? [],
-		project: task.project
-			? { id: task.project.id, name: task.project.name, status: task.project.status }
-			: undefined,
+		project: task.project ? { id: task.project.id, name: task.project.name, status: task.project.status } : undefined,
 		commentsCount: task._count?.comments ?? 0,
 		subtasksCount: task._count?.subtasks ?? 0,
+		attachmentsCount: task._count?.attachments ?? 0,
+		isStarted: isTaskStarted(task),
+		parentTask: task.parentTask ? { id: task.parentTask.id, title: task.parentTask.title } : null,
+		openBlockersCount: task.dependenciesIn?.length ?? 0,
 		forecast: buildForecast(task),
 	};
 }

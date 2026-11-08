@@ -31,13 +31,7 @@ function wrapMethod<BodyType extends z.ZodType, Request extends z.ZodType>(
 	method: IApiMethod<BodyType, Request>,
 	instance?: AxiosInstance,
 ) {
-	const fn: TFnWithMethod<BodyType, Request> = async (
-		pathParams,
-		params,
-		payload,
-		signal,
-		transferCallbacks,
-	) => {
+	const fn: TFnWithMethod<BodyType, Request> = async (pathParams, params, payload, signal, transferCallbacks) => {
 		const interpolatedUrl = replacePathParams(method.path, pathParams ?? {});
 		const res = await (instance ?? apiInstance).request<z.infer<BodyType>>({
 			url: interpolatedUrl,

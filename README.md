@@ -1,8 +1,8 @@
 # TASKO
 
-WEB-система управления проектами. Текущая версия — MVP без ML: проекты, задачи, workflow, комментарии, уведомления и аналитика.
+WEB-система управления проектами. Проекты, задачи с подзадачами, зависимостями и вложениями, workflow, комментарии, уведомления, аналитика и ML-прогноз длительности задачи и риска срыва срока.
 
-Спецификация с ML-контуром лежит в корне репозитория. ML, вложения и зависимости задач добавим отдельным этапом.
+Спецификация лежит в корне репозитория.
 
 ## Стек
 
@@ -32,6 +32,39 @@ npm run dev
 - UI: http://localhost:5173
 - API: http://localhost:3000/api
 - Swagger: http://localhost:3000/docs
+
+## ML-модуль
+
+Прогноз длительности задачи и риска срыва срока лежит в [`ml/`](ml/README.md): обучение на истории задач, сравнение алгоритмов и FastAPI-сервис прогноза. 
+
+Как включить прогноз в приложении:
+
+```bash
+cd ml
+.venv/Scripts/python -m tasko_ml.train --source db --db-url "postgresql://tasko:tasko@localhost:5434/tasko"
+.venv/Scripts/python -m uvicorn service.app:app --port 8001
+```
+
+В `backend/.env` должно быть `ML_SERVICE_URL="http://localhost:8001"`. Бэкенд пересчитывает прогноз при создании задачи,
+при смене полей, от которых он зависит, и по кнопке «Пересчитать» в карточке задачи. Если сервис выключен или моделей
+нет, приложение работает как раньше и показывает оценку по простым правилам с пометкой «По правилам».
+
+## Проверки кода
+
+```bash
+cd backend
+npm run lint          # ESLint
+npm run format:check  # Prettier (npm run format — исправить)
+npm test              # Jest
+
+cd ../frontend
+npm run lint
+npm run format:check
+npm test              # Vitest
+npm run typecheck     # vue-tsc
+```
+
+Общие настройки форматирования — в `.prettierrc.json` и `.editorconfig` в корне.
 
 ## Демо-доступ
 

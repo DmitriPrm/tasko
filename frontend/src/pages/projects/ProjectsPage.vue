@@ -46,9 +46,7 @@ const handleStatus = (value: ProjectStatus | "") => {
 const canEditProject = (project: Project) => {
 	if (authStore.isAdmin) return true;
 	return Boolean(
-		project.members?.some(
-			(member) => member.userId === authStore.user?.id && member.projectRole === "MANAGER",
-		),
+		project.members?.some((member) => member.userId === authStore.user?.id && member.projectRole === "MANAGER"),
 	);
 };
 
@@ -78,12 +76,7 @@ const handleOpenCreate = async () => {
 								:placeholder="translate('project.status')"
 								@change="(value: ProjectStatus) => handleStatus(value || '')"
 							>
-								<el-option
-									v-for="item in STATUSES"
-									:key="item"
-									:label="projectStatusLabel(item)"
-									:value="item"
-								/>
+								<el-option v-for="item in STATUSES" :key="item" :label="projectStatusLabel(item)" :value="item" />
 							</el-select>
 						</base-flex>
 					</div>

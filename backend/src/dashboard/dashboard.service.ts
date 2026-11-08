@@ -4,6 +4,7 @@ import { SystemRole, TaskStatus } from "@prisma/client";
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { toProjectDto } from "../projects/project.mapper";
+import { latestPredictionInclude } from "../predictions/predictions.service";
 import { buildForecast } from "../tasks/forecast";
 import { toTaskDto } from "../tasks/task.mapper";
 
@@ -19,9 +20,7 @@ export class DashboardService {
 
 		const openWhere = {
 			status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-			...(user.systemRole === SystemRole.ADMIN
-				? {}
-				: { project: { members: { some: { userId: user.id } } } }),
+			...(user.systemRole === SystemRole.ADMIN ? {} : { project: { members: { some: { userId: user.id } } } }),
 		};
 
 		const [projects, myTasks, upcoming, openTasks] = await Promise.all([
@@ -45,6 +44,7 @@ export class DashboardService {
 					assignee: true,
 					project: { select: { id: true, name: true, status: true } },
 					_count: { select: { comments: true, subtasks: true } },
+					...latestPredictionInclude,
 				},
 				orderBy: { deadlineAt: "asc" },
 				take: 8,
@@ -53,21 +53,19 @@ export class DashboardService {
 				where: {
 					deadlineAt: { not: null },
 					status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-					project:
-						user.systemRole === SystemRole.ADMIN
-							? undefined
-							: { members: { some: { userId: user.id } } },
+					project: user.systemRole === SystemRole.ADMIN ? undefined : { members: { some: { userId: user.id } } },
 				},
 				include: {
 					author: true,
 					assignee: true,
 					project: { select: { id: true, name: true, status: true } },
 					_count: { select: { comments: true, subtasks: true } },
+					...latestPredictionInclude,
 				},
 				orderBy: { deadlineAt: "asc" },
 				take: 6,
 			}),
-			this.prisma.task.findMany({ where: openWhere }),
+			this.prisma.task.findMany({ where: openWhere, include: latestPredictionInclude }),
 		]);
 
 		const now = new Date();

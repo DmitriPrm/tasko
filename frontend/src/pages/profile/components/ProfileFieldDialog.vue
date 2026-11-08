@@ -54,11 +54,7 @@ const handleSubmit = async () => {
 		if (props.field) {
 			await baseApi.users.updateProfileField({ userId: props.userId, fieldId: props.field.id }, undefined, payload);
 		} else if (props.sectionId) {
-			await baseApi.users.createProfileField(
-				{ userId: props.userId, sectionId: props.sectionId },
-				undefined,
-				payload,
-			);
+			await baseApi.users.createProfileField({ userId: props.userId, sectionId: props.sectionId }, undefined, payload);
 		}
 		emit("resolve", true);
 	} finally {
@@ -81,12 +77,7 @@ const handleSubmit = async () => {
 			</el-form-item>
 			<el-form-item :label="translate('settings.fieldType')">
 				<el-select v-model="type" :teleported="false">
-					<el-option
-						v-for="item in FIELD_TYPES"
-						:key="item"
-						:label="translate(`fieldType.${item}`)"
-						:value="item"
-					/>
+					<el-option v-for="item in FIELD_TYPES" :key="item" :label="translate(`fieldType.${item}`)" :value="item" />
 				</el-select>
 			</el-form-item>
 			<el-form-item v-if="needsOptions" :label="translate('settings.options')" required>

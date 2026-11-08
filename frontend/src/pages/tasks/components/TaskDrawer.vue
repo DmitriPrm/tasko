@@ -1,9 +1,14 @@
 <script lang="ts" setup>
 import { CircleCheck, CircleCheckFilled, Plus, Close } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
+import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 
+import TaskAttachments from "@/pages/tasks/components/TaskAttachments.vue";
 import TaskComments from "@/pages/tasks/components/TaskComments.vue";
+import TaskDependencies from "@/pages/tasks/components/TaskDependencies.vue";
+import TaskForecast from "@/pages/tasks/components/TaskForecast.vue";
+import TaskSubtasks from "@/pages/tasks/components/TaskSubtasks.vue";
 import TaskHistory from "@/pages/tasks/components/TaskHistory.vue";
 import TaskTagField from "@/pages/tasks/components/TaskTagField.vue";
 import { baseApi } from "@/shared/api/baseApi";
@@ -19,6 +24,7 @@ import BaseDescriptionList from "@/shared/ui/description/BaseDescriptionList.vue
 import BaseDrawer from "@/shared/ui/drawer/BaseDrawer.vue";
 import BaseUserSelect from "@/shared/ui/select/BaseUserSelect.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
+import { useAuthStore } from "@/store/auth";
 
 const emit = defineEmits<{
 	"update:taskId": [value: string | null];
@@ -36,6 +42,8 @@ const visible = computed({
 		if (!value) emit("update:taskId", null);
 	},
 });
+
+const authStore = useAuthStore();
 
 const priorities: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
@@ -85,12 +93,8 @@ const { fetch: transitionTask } = useFetch(baseApi.tasks.transitionTask, "data",
 	resetOnFetch: false,
 });
 
-const memberUsers = computed(() =>
-	((project.value?.members || []) as ProjectMember[]).map((member) => member.user),
-);
-const availableCoAssignees = computed(() =>
-	memberUsers.value.filter((user) => user.id !== assigneeId.value),
-);
+const memberUsers = computed(() => ((project.value?.members || []) as ProjectMember[]).map((member) => member.user));
+const availableCoAssignees = computed(() => memberUsers.value.filter((user) => user.id !== assigneeId.value));
 const projectTags = computed(() => (tagsState.value || []) as Tag[]);
 const availableTransitions = computed(() => {
 	const status = task.value?.status as TaskStatus | undefined;
@@ -146,9 +150,20 @@ const handleSave = async () => {
 
 const handleDelete = async () => {
 	if (!props.taskId) return;
-	const confirmed = await openConfirm({ title: translate("task.delete") });
+	// Начатую задачу бэкенд не удаляет, а отменяет: предупреждаем об этом заранее
+	const isStarted = Boolean(task.value?.isStarted);
+	const confirmed = await openConfirm(
+		isStarted
+			? {
+					title: translate("task.cancelConfirmTitle"),
+					text: translate("task.cancelConfirmText"),
+					confirmLabel: translate("task.cancel"),
+				}
+			: { title: translate("task.delete") },
+	);
 	if (!confirmed) return;
-	await removeTask();
+	const result = await removeTask();
+	if (result?.cancelled) ElMessage({ type: "success", message: translate("task.cancelled") });
 	emit("deleted");
 	handleClose();
 };
@@ -202,6 +217,20 @@ const handleDeadlineChange = (value: string | "") => {
 	deadlineAt.value = value;
 };
 
+/** Переход к подзадаче, родителю или связанной задаче в той же панели */
+const handleOpenTask = (id: string) => emit("update:taskId", id);
+
+const handleRelationsChanged = async () => {
+	emit("updated");
+	await fetchTask();
+};
+
+/** Прогноз имеет смысл только для открытой задачи */
+const showForecast = computed(
+	() =>
+		Boolean(task.value?.forecast) && !["DONE", "CANCELLED"].includes(task.value?.status) && !task.value?.isCompleted,
+);
+
 const findUser = (userId: string): User | undefined => memberUsers.value.find((user) => user.id === userId);
 </script>
 
@@ -210,11 +239,7 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 		<template #header>
 			<base-flex class="task-drawer__heading" align="flex-start" :gap="2">
 				<button class="task-drawer__check-btn" type="button" @click="handleToggleCompleted">
-					<el-icon
-						class="task-drawer__check"
-						:class="{ 'task-drawer__check--done': isCompleted }"
-						:size="20"
-					>
+					<el-icon class="task-drawer__check" :class="{ 'task-drawer__check--done': isCompleted }" :size="20">
 						<circle-check-filled v-if="isCompleted" />
 						<circle-check v-else />
 					</el-icon>
@@ -330,10 +355,46 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 						{{ translate("common.save") }}
 					</base-button>
 					<base-button type="danger" :loading="isDeleting" @click="handleDelete">
-						{{ translate("task.delete") }}
+						{{ task.isStarted ? translate("task.cancel") : translate("task.delete") }}
 					</base-button>
 				</base-flex>
 
+				<task-forecast
+					v-if="taskId && showForecast"
+					:task-id="taskId"
+					:forecast="task.forecast"
+					@refreshed="emit('updated')"
+				/>
+				<button
+					v-if="task.parentTask"
+					class="task-drawer__parent"
+					type="button"
+					@click="() => handleOpenTask(task.parentTask.id)"
+				>
+					{{ translate("task.parent") }} «{{ task.parentTask.title }}»
+				</button>
+				<task-subtasks
+					v-if="taskId"
+					:task-id="taskId"
+					:project-id="task.projectId"
+					:can-create="Boolean(task.canEdit)"
+					@open="handleOpenTask"
+					@changed="handleRelationsChanged"
+				/>
+				<task-dependencies
+					v-if="taskId"
+					:task-id="taskId"
+					:project-id="task.projectId"
+					:editable="Boolean(task.canEdit)"
+					@open="handleOpenTask"
+					@changed="handleRelationsChanged"
+				/>
+				<task-attachments
+					v-if="taskId"
+					:task-id="taskId"
+					:can-manage="Boolean(task.canEdit)"
+					:current-user-id="authStore.user?.id"
+				/>
 				<task-history v-if="taskId" :task-id="taskId" />
 				<task-comments v-if="taskId" :task-id="taskId" />
 			</base-flex>
@@ -407,6 +468,17 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 			padding-bottom: map.get($spacers, 3);
 			border-bottom: 1px solid var(--mt-color-gray-100);
 		}
+	}
+
+	&__parent {
+		align-self: flex-start;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--mt-color-primary);
+		font: inherit;
+		font-size: map.get($font-sizes, 6);
+		cursor: pointer;
 	}
 
 	&__label {

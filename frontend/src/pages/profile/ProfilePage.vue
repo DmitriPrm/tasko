@@ -12,11 +12,13 @@ import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { formatDate, isTaskOverdue } from "@/shared/lib/helpers/formatDate";
 import {
+	PRIORITY_RANK,
 	priorityLabel,
 	priorityTagType,
 	projectStatusDot,
 	roleLabel,
 	statusLabel,
+	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
@@ -45,13 +47,21 @@ function applyProfile(state?: Profile) {
 	fullName.value = state.fullName;
 }
 
-const { state: profile, isLoading, fetch: fetchProfile } = useFetch(baseApi.users.getProfile, "data", {
+const {
+	state: profile,
+	isLoading,
+	fetch: fetchProfile,
+} = useFetch(baseApi.users.getProfile, "data", {
 	immediate: true,
 	pathParams: computed(() => ({ id: userId.value })),
 	onSuccess: ({ state }) => applyProfile(state),
 });
 
-const { state: tasksState, isLoading: isTasksLoading, fetch: fetchTasks } = useFetch(baseApi.tasks.getTasks, "data", {
+const {
+	state: tasksState,
+	isLoading: isTasksLoading,
+	fetch: fetchTasks,
+} = useFetch(baseApi.tasks.getTasks, "data", {
 	immediate: true,
 	params: computed(() => ({ assigneeId: userId.value, perPage: 100 })),
 });
@@ -89,7 +99,9 @@ const stats = computed(() => {
 const statusBreakdown = computed(() => {
 	const total = tasks.value.length || 1;
 	return STATUS_ORDER.map((status) => {
-		const count = tasks.value.filter((task) => (status === "DONE" ? isDone(task) : task.status === status && !isDone(task))).length;
+		const count = tasks.value.filter((task) =>
+			status === "DONE" ? isDone(task) : task.status === status && !isDone(task),
+		).length;
 		return { status, count, width: (count / total) * 100 };
 	}).filter((item) => item.count > 0);
 });
@@ -127,7 +139,13 @@ const filteredTasks = computed(() => {
 
 const statCards = computed(() => [
 	{ key: "assigned", label: translate("profile.assigned"), value: stats.value.assigned, icon: Memo, tone: "primary" },
-	{ key: "inProgress", label: translate("profile.inProgress"), value: stats.value.inProgress, icon: Clock, tone: "warning" },
+	{
+		key: "inProgress",
+		label: translate("profile.inProgress"),
+		value: stats.value.inProgress,
+		icon: Clock,
+		tone: "warning",
+	},
 	{ key: "done", label: translate("profile.done"), value: stats.value.done, icon: CircleCheck, tone: "success" },
 	{ key: "overdue", label: translate("profile.overdue"), value: stats.value.overdue, icon: Warning, tone: "danger" },
 ]);
@@ -137,8 +155,8 @@ const initialTab = () => (canViewTasks.value ? "overview" : "details");
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "deadlineAt", label: translate("task.deadline") },
 ]);
 
@@ -307,7 +325,9 @@ watch(
 							<dl class="profile-page__facts">
 								<div>
 									<dt>{{ translate("users.email") }}</dt>
-									<dd><a class="profile-page__link" :href="`mailto:${profile.email}`">{{ profile.email }}</a></dd>
+									<dd>
+										<a class="profile-page__link" :href="`mailto:${profile.email}`">{{ profile.email }}</a>
+									</dd>
 								</div>
 								<div>
 									<dt>{{ translate("users.role") }}</dt>
@@ -378,9 +398,7 @@ watch(
 										<li v-for="status in STATUS_ORDER" :key="status">
 											<span class="profile-page__dot" :style="{ background: STATUS_COLOR[status] }" />
 											{{ statusLabel(status) }}
-											<strong>{{
-												statusBreakdown.find((item) => item.status === status)?.count ?? 0
-											}}</strong>
+											<strong>{{ statusBreakdown.find((item) => item.status === status)?.count ?? 0 }}</strong>
 										</li>
 									</ul>
 								</base-card>
@@ -506,8 +524,7 @@ watch(
 		height: 120px;
 		background:
 			radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
-			radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.18), transparent 40%),
-			var(--mt-gradient-brand);
+			radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.18), transparent 40%), var(--mt-gradient-brand);
 	}
 
 	&__hero-body {

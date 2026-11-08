@@ -21,7 +21,7 @@ const emit = defineEmits<{
 	"update:priority": [value: TaskPriority | ""];
 }>();
 
-const props = defineProps<{
+defineProps<{
 	search: string;
 	view: TasksView;
 	assigneeId: string;
@@ -38,7 +38,8 @@ const priorities: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 const handleSearch = (value: string) => emit("update:search", value);
 const handleView = (value: TasksView) => emit("update:view", value);
-const handleAssignee = (value: string | string[]) => emit("update:assigneeId", Array.isArray(value) ? value[0] || "" : value);
+const handleAssignee = (value: string | string[]) =>
+	emit("update:assigneeId", Array.isArray(value) ? value[0] || "" : value);
 const handleTag = (value: string) => emit("update:tagId", value);
 const handleCompleted = (value: CompletedFilter) => emit("update:completed", value);
 const handleOverdue = (value: boolean) => emit("update:overdue", value);
@@ -105,10 +106,7 @@ const handlePriority = (value: TaskPriority | "") => emit("update:priority", val
 						>
 							<el-option v-for="item in priorities" :key="item" :label="priorityLabel(item)" :value="item" />
 						</el-select>
-						<el-checkbox
-							:model-value="overdue"
-							@update:model-value="(value: boolean) => handleOverdue(Boolean(value))"
-						>
+						<el-checkbox :model-value="overdue" @update:model-value="(value: boolean) => handleOverdue(Boolean(value))">
 							{{ translate("task.overdue") }}
 						</el-checkbox>
 					</base-flex>

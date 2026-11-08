@@ -17,6 +17,7 @@ jest.mock("bcrypt", () => ({
 
 jest.mock("../common/avatar/files", () => ({
 	saveGeneratedAvatar: jest.fn().mockReturnValue("avatar.svg"),
+	publicAvatarUrl: jest.fn().mockReturnValue(null),
 }));
 
 describe("AuthService", () => {
@@ -190,9 +191,7 @@ describe("AuthService", () => {
 		prisma.user.findUnique.mockResolvedValue(user);
 		(bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-		await expect(service.login({ email: user.email, password: "bad" })).rejects.toBeInstanceOf(
-			UnauthorizedException,
-		);
+		await expect(service.login({ email: user.email, password: "bad" })).rejects.toBeInstanceOf(UnauthorizedException);
 	});
 
 	it("rejects a blocked user", async () => {

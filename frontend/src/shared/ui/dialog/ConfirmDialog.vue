@@ -8,9 +8,10 @@ const emit = defineEmits<{
 	cancel: [];
 }>();
 
-const props = defineProps<{
+defineProps<{
 	title?: string;
 	text?: string;
+	confirmLabel?: string;
 }>();
 
 const visible = ref(true);
@@ -34,7 +35,7 @@ const handleCancel = () => {
 		<base-flex direction="column" :gap="5">
 			<p class="confirm-dialog__text">{{ text || translate("common.confirmDelete") }}</p>
 			<base-flex justify="flex-start" :gap="3">
-				<base-button type="danger" @click="handleConfirm">{{ translate("common.delete") }}</base-button>
+				<base-button type="danger" @click="handleConfirm">{{ confirmLabel || translate("common.delete") }}</base-button>
 				<base-button @click="handleCancel">{{ translate("common.cancel") }}</base-button>
 			</base-flex>
 		</base-flex>

@@ -9,10 +9,7 @@ export interface DialogRecord {
 
 const dialogs = shallowRef<DialogRecord[]>([]);
 
-export function openDialog<T = boolean>(
-	component: Component,
-	props: Record<string, unknown> = {},
-): Promise<T | false> {
+export function openDialog<T = boolean>(component: Component, props: Record<string, unknown> = {}): Promise<T | false> {
 	return new Promise((resolve) => {
 		dialogs.value = [
 			...dialogs.value,

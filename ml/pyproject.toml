@@ -1,0 +1,9 @@
+[project]
+name = "tasko-ml"
+version = "0.1.0"
+description = "Прогноз длительности задачи и риска срыва срока для TASKO"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,10 +1,4 @@
-import {
-	BadRequestException,
-	ForbiddenException,
-	GoneException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, ForbiddenException, GoneException, Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InvitationStatus, Prisma, ProjectInvitation, User } from "@prisma/client";
 

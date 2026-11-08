@@ -9,9 +9,9 @@ import { useLayoutStore } from "@/store/layout";
 import { useTaskDrawerStore } from "@/store/taskDrawer";
 
 const layoutStore = useLayoutStore();
-const taskDrawer = useTaskDrawerStore();
+const taskDrawerStore = useTaskDrawerStore();
 
-const handleTaskChanged = () => taskDrawer.markChanged();
+const handleTaskChanged = () => taskDrawerStore.markChanged();
 
 const handleCloseMobile = () => layoutStore.closeMobile();
 
@@ -48,7 +48,7 @@ onUnmounted(() => {
 			<email-verify-banner />
 			<router-view />
 		</main>
-		<task-drawer v-model:task-id="taskDrawer.taskId" @updated="handleTaskChanged" @deleted="handleTaskChanged" />
+		<task-drawer v-model:task-id="taskDrawerStore.taskId" @updated="handleTaskChanged" @deleted="handleTaskChanged" />
 	</base-flex>
 </template>
 

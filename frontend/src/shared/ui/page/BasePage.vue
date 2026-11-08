@@ -78,13 +78,7 @@ watch(() => route.fullPath, syncHistoryBack, { immediate: true });
 				<p v-if="description" class="base-page__description">{{ description }}</p>
 				<slot name="subtitle" />
 			</div>
-			<base-flex
-				v-if="slots.actions"
-				class="base-page__actions"
-				align="center"
-				justify="flex-end"
-				:gap="0"
-			>
+			<base-flex v-if="slots.actions" class="base-page__actions" align="center" justify="flex-end" :gap="0">
 				<slot name="actions" />
 			</base-flex>
 		</base-flex>

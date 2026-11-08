@@ -18,9 +18,7 @@ interface LayoutOptions {
 }
 
 function layout({ title, paragraphs, buttonLabel, url, footer }: LayoutOptions) {
-	const body = paragraphs
-		.map((text) => `<p style="margin:0 0 16px;font-size:15px;color:#3b4258">${text}</p>`)
-		.join("");
+	const body = paragraphs.map((text) => `<p style="margin:0 0 16px;font-size:15px;color:#3b4258">${text}</p>`).join("");
 
 	return `<!doctype html>
 <html lang="ru">

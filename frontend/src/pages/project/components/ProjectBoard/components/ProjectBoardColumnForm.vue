@@ -2,7 +2,17 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const MAX_LENGTH = 255;
-const COLOR_PRESETS = ["#2563EB", "#0EA5E9", "#10B981", "#84CC16", "#F59E0B", "#EF4444", "#EC4899", "#7C3AED", "#6B7280"];
+const COLOR_PRESETS = [
+	"#2563EB",
+	"#0EA5E9",
+	"#10B981",
+	"#84CC16",
+	"#F59E0B",
+	"#EF4444",
+	"#EC4899",
+	"#7C3AED",
+	"#6B7280",
+];
 
 const emit = defineEmits<{
 	submit: [payload: { name: string; color: string }];

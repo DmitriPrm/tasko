@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CircleCheck, CircleCheckFilled, Plus } from "@/shared/ui/icon/icons";
+import { CircleCheck, CircleCheckFilled, List, Lock, Plus, Warning } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
 import { computed, ref } from "vue";
 
@@ -27,9 +27,15 @@ const isAssigneeOpen = ref(false);
 const isDeadlineOpen = ref(false);
 
 const memberUsers = computed(() => (props.members || []).map((member) => member.user));
-const deadlineValue = computed(() =>
-	props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : "",
-);
+const deadlineValue = computed(() => (props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : ""));
+
+/** Значок риска — только для открытых задач с высоким риском срыва срока */
+const highRisk = computed(() => {
+	const forecast = props.task.forecast;
+	if (!forecast || forecast.riskLevel !== "HIGH" || props.task.isCompleted) return null;
+	if (props.task.status === "DONE" || props.task.status === "CANCELLED") return null;
+	return Math.round(forecast.riskProbability * 100);
+});
 
 const handleOpen = () => emit("open", props.task.id);
 const handleComplete = (event: Event) => {
@@ -70,20 +76,34 @@ const handleDeadline = (value: string | "") => {
 				</el-icon>
 			</button>
 			<base-flex direction="column" :gap="3" width="full">
-				<strong
-					class="project-board-card__title"
-					:class="{ 'project-board-card__title--done': task.isCompleted }"
-				>
+				<strong class="project-board-card__title" :class="{ 'project-board-card__title--done': task.isCompleted }">
 					{{ task.title }}
 				</strong>
-				<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
-				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
+				<base-flex align="center" :gap="2" wrap="wrap">
+					<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
 					<span
-						v-for="tag in task.tags"
-						:key="tag.id"
-						class="project-board-card__tag"
-						:style="{ color: tag.color }"
+						v-if="task.openBlockersCount"
+						class="project-board-card__badge project-board-card__badge--blocked"
+						:title="translate('task.blocked')"
 					>
+						<el-icon :size="12" aria-hidden="true"><lock /></el-icon>
+						{{ task.openBlockersCount }}
+					</span>
+					<span
+						v-if="highRisk !== null"
+						class="project-board-card__badge project-board-card__badge--risk"
+						:title="translate('forecast.highRiskBadge')"
+					>
+						<el-icon :size="12" aria-hidden="true"><warning /></el-icon>
+						{{ highRisk }}%
+					</span>
+					<span v-if="task.subtasksCount" class="project-board-card__badge" :title="translate('task.subtasks')">
+						<el-icon :size="12" aria-hidden="true"><list /></el-icon>
+						{{ task.subtasksCount }}
+					</span>
+				</base-flex>
+				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
+					<span v-for="tag in task.tags" :key="tag.id" class="project-board-card__tag" :style="{ color: tag.color }">
 						{{ tag.name }}
 					</span>
 				</base-flex>
@@ -101,7 +121,7 @@ const handleDeadline = (value: string | "") => {
 						<template #reference>
 							<button
 								class="project-board-card__date"
-								:class="{ 								'project-board-card__date--overdue': isTaskOverdue(task) }"
+								:class="{ 'project-board-card__date--overdue': isTaskOverdue(task) }"
 								type="button"
 								@click="handleStop"
 								@mousedown="handleStop"
@@ -119,19 +139,9 @@ const handleDeadline = (value: string | "") => {
 							@update:model-value="handleAssignee"
 						/>
 						<template #reference>
-							<button
-								class="project-board-card__assignee"
-								type="button"
-								@click="handleStop"
-								@mousedown="handleStop"
-							>
+							<button class="project-board-card__assignee" type="button" @click="handleStop" @mousedown="handleStop">
 								<base-user-name v-if="task.assignee" :user="task.assignee" icon-only :size="24" :link="false" />
-								<base-flex
-									v-else
-									class="project-board-card__assignee-empty"
-									align="center"
-									justify="center"
-								>
+								<base-flex v-else class="project-board-card__assignee-empty" align="center" justify="center">
 									<el-icon :size="14"><plus /></el-icon>
 								</base-flex>
 							</button>
@@ -203,6 +213,28 @@ const handleDeadline = (value: string | "") => {
 		background: var(--mt-color-gray-50);
 		font-size: map.get($font-sizes, 8);
 		font-weight: 600;
+	}
+
+	&__badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		padding: 1px map.get($spacers, 2);
+		border-radius: 6px;
+		background: var(--mt-color-gray-50);
+		color: var(--mt-color-gray-500);
+		font-size: map.get($font-sizes, 8);
+		font-weight: 600;
+
+		&--blocked {
+			background: var(--mt-color-warning-light);
+			color: var(--mt-color-warning);
+		}
+
+		&--risk {
+			background: var(--mt-color-danger-light);
+			color: var(--mt-color-danger);
+		}
 	}
 
 	&__priority {
