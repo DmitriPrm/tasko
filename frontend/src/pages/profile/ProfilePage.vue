@@ -522,7 +522,8 @@ watch(
 
 	&__cover {
 		height: 120px;
-		background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
+		background:
+			radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
 			radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.18), transparent 40%), var(--mt-gradient-brand);
 	}
 
