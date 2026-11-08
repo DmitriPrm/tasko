@@ -32,7 +32,7 @@ const taskInclude = {
 		},
 		select: { id: true },
 	},
-	_count: { select: { comments: true, subtasks: true } },
+	_count: { select: { comments: true, subtasks: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
 @Injectable()

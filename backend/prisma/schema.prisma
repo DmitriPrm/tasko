@@ -98,6 +98,7 @@ model User {
   statusChanges       TaskStatusHistory[]
   fieldChanges        TaskChangeHistory[]
   comments            Comment[]
+  attachments         Attachment[]
   createdDependencies TaskDependency[]
   notifications       Notification[]
   permissions         UserPermission[]
@@ -221,6 +222,7 @@ model Task {
   statusHistory   TaskStatusHistory[]
   changeHistory   TaskChangeHistory[]
   comments        Comment[]
+  attachments     Attachment[]
   notifications   Notification[]
   dependenciesOut TaskDependency[]    @relation("DependencySource")
   dependenciesIn  TaskDependency[]    @relation("DependencyTarget")
@@ -300,6 +302,24 @@ model TaskDependency {
   @@unique([sourceTaskId, targetTaskId])
   @@index([targetTaskId])
   @@map("task_dependencies")
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  taskId       String   @map("task_id")
+  uploadedBy   String   @map("uploaded_by")
+  originalName String   @map("original_name")
+  /// Путь относительно storage/attachments; сам файл в базе не хранится
+  storageKey   String   @map("storage_key")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@map("attachments")
 }
 
 model Comment {

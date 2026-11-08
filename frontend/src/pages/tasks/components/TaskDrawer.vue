@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { ElMessage } from "element-plus";
 import { computed, ref, watch } from "vue";
 
+import TaskAttachments from "@/pages/tasks/components/TaskAttachments.vue";
 import TaskComments from "@/pages/tasks/components/TaskComments.vue";
 import TaskDependencies from "@/pages/tasks/components/TaskDependencies.vue";
 import TaskSubtasks from "@/pages/tasks/components/TaskSubtasks.vue";
@@ -22,6 +23,7 @@ import BaseDescriptionList from "@/shared/ui/description/BaseDescriptionList.vue
 import BaseDrawer from "@/shared/ui/drawer/BaseDrawer.vue";
 import BaseUserSelect from "@/shared/ui/select/BaseUserSelect.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
+import { useAuthStore } from "@/store/auth";
 
 const emit = defineEmits<{
 	"update:taskId": [value: string | null];
@@ -39,6 +41,8 @@ const visible = computed({
 		if (!value) emit("update:taskId", null);
 	},
 });
+
+const authStore = useAuthStore();
 
 const priorities: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
@@ -371,6 +375,12 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 					:editable="Boolean(task.canEdit)"
 					@open="handleOpenTask"
 					@changed="handleRelationsChanged"
+				/>
+				<task-attachments
+					v-if="taskId"
+					:task-id="taskId"
+					:can-manage="Boolean(task.canEdit)"
+					:current-user-id="authStore.user?.id"
 				/>
 				<task-history v-if="taskId" :task-id="taskId" />
 				<task-comments v-if="taskId" :task-id="taskId" />

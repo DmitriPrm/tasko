@@ -1,4 +1,5 @@
 export * as analytics from "./analytics/analytics";
+export * as attachments from "./attachments/attachments";
 export * as auth from "./auth/auth";
 export * as comments from "./comments/comments";
 export * as dashboard from "./dashboard/dashboard";

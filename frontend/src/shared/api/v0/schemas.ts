@@ -169,6 +169,7 @@ export const ZTask = z.object({
 	isStarted: z.boolean().optional(),
 	parentTask: z.object({ id: z.string(), title: z.string() }).nullable().optional(),
 	openBlockersCount: z.number().optional(),
+	attachmentsCount: z.number().optional(),
 	canEdit: z.boolean().optional(),
 	forecast: z
 		.object({
@@ -373,3 +374,15 @@ export const ZTaskDependencies = z.object({
 export type BriefTask = z.infer<typeof ZBriefTask>;
 export type TaskDependencies = z.infer<typeof ZTaskDependencies>;
 export type DependencyKind = "DEPENDS_ON" | "BLOCKS" | "RELATED";
+
+export const ZAttachment = z.object({
+	id: z.string(),
+	taskId: z.string(),
+	originalName: z.string(),
+	mimeType: z.string(),
+	sizeBytes: z.number(),
+	createdAt: z.string(),
+	uploader: ZUser,
+});
+
+export type Attachment = z.infer<typeof ZAttachment>;

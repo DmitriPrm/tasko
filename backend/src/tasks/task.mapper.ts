@@ -13,7 +13,7 @@ type TaskWithRelations = Task & {
 	coAssignees?: { user: User }[];
 	parentTask?: { id: string; title: string } | null;
 	dependenciesIn?: { id: string }[];
-	_count?: { comments: number; subtasks: number };
+	_count?: { comments: number; subtasks: number; attachments?: number };
 };
 
 export function toTaskDto(task: TaskWithRelations) {
@@ -43,6 +43,7 @@ export function toTaskDto(task: TaskWithRelations) {
 		project: task.project ? { id: task.project.id, name: task.project.name, status: task.project.status } : undefined,
 		commentsCount: task._count?.comments ?? 0,
 		subtasksCount: task._count?.subtasks ?? 0,
+		attachmentsCount: task._count?.attachments ?? 0,
 		isStarted: isTaskStarted(task),
 		parentTask: task.parentTask ? { id: task.parentTask.id, title: task.parentTask.title } : null,
 		openBlockersCount: task.dependenciesIn?.length ?? 0,

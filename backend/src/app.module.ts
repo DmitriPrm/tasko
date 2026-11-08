@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { AccessModule } from "./access/access.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { AttachmentsModule } from "./attachments/attachments.module";
 import { AvatarsModule } from "./avatars/avatars.module";
 import { AuthModule } from "./auth/auth.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
@@ -35,6 +36,7 @@ import { UsersModule } from "./users/users.module";
 		TasksModule,
 		TableLayoutsModule,
 		CommentsModule,
+		AttachmentsModule,
 		NotificationsModule,
 		AnalyticsModule,
 		AvatarsModule,
