@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CircleCheck, CircleCheckFilled, Plus } from "@/shared/ui/icon/icons";
+import { CircleCheck, CircleCheckFilled, List, Lock, Plus } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
 import { computed, ref } from "vue";
 
@@ -71,7 +71,21 @@ const handleDeadline = (value: string | "") => {
 				<strong class="project-board-card__title" :class="{ 'project-board-card__title--done': task.isCompleted }">
 					{{ task.title }}
 				</strong>
-				<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
+				<base-flex align="center" :gap="2" wrap="wrap">
+					<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
+					<span
+						v-if="task.openBlockersCount"
+						class="project-board-card__badge project-board-card__badge--blocked"
+						:title="translate('task.blocked')"
+					>
+						<el-icon :size="12" aria-hidden="true"><lock /></el-icon>
+						{{ task.openBlockersCount }}
+					</span>
+					<span v-if="task.subtasksCount" class="project-board-card__badge" :title="translate('task.subtasks')">
+						<el-icon :size="12" aria-hidden="true"><list /></el-icon>
+						{{ task.subtasksCount }}
+					</span>
+				</base-flex>
 				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
 					<span v-for="tag in task.tags" :key="tag.id" class="project-board-card__tag" :style="{ color: tag.color }">
 						{{ tag.name }}
@@ -183,6 +197,23 @@ const handleDeadline = (value: string | "") => {
 		background: var(--mt-color-gray-50);
 		font-size: map.get($font-sizes, 8);
 		font-weight: 600;
+	}
+
+	&__badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		padding: 1px map.get($spacers, 2);
+		border-radius: 6px;
+		background: var(--mt-color-gray-50);
+		color: var(--mt-color-gray-500);
+		font-size: map.get($font-sizes, 8);
+		font-weight: 600;
+
+		&--blocked {
+			background: var(--mt-color-warning-light);
+			color: var(--mt-color-warning);
+		}
 	}
 
 	&__priority {
