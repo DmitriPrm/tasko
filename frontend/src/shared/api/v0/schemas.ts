@@ -134,6 +134,45 @@ export const ZProjectColumn = z.object({
 	tasksCount: z.number().optional().default(0),
 });
 
+export const ZForecastFactor = z.object({
+	feature: z.string(),
+	label: z.string(),
+	impact: z.number(),
+	value: z.union([z.string(), z.number()]).nullable().optional(),
+});
+
+/** Прогноз задачи: source ML — обученная модель, RULES — простые правила, пока модели нет */
+export const ZTaskForecast = z.object({
+	source: z.enum(["ML", "RULES"]).default("RULES"),
+	durationDays: z.number(),
+	durationHours: z.number().optional(),
+	riskProbability: z.number(),
+	riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
+	calculatedAt: z.string(),
+	inputs: z.array(z.object({ code: z.string(), value: z.string() })),
+	factors: z.array(z.string()),
+	riskFactors: z.array(ZForecastFactor).default([]),
+	durationFactors: z.array(ZForecastFactor).default([]),
+	models: z.object({ duration: z.string().nullable(), risk: z.string().nullable() }).nullable().optional(),
+});
+
+export const ZTaskPrediction = z.object({
+	forecast: ZTaskForecast,
+	mlEnabled: z.boolean(),
+	refreshed: z.boolean().optional(),
+	history: z.array(
+		z.object({
+			id: z.string(),
+			trigger: z.enum(["CREATED", "UPDATED", "MANUAL"]),
+			durationHours: z.number().nullable(),
+			riskProbability: z.number().nullable(),
+			durationModel: z.string().nullable(),
+			riskModel: z.string().nullable(),
+			createdAt: z.string(),
+		}),
+	),
+});
+
 export const ZTask = z.object({
 	id: z.string(),
 	projectId: z.string(),
@@ -171,16 +210,7 @@ export const ZTask = z.object({
 	openBlockersCount: z.number().optional(),
 	attachmentsCount: z.number().optional(),
 	canEdit: z.boolean().optional(),
-	forecast: z
-		.object({
-			durationDays: z.number(),
-			riskProbability: z.number(),
-			riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
-			calculatedAt: z.string(),
-			inputs: z.array(z.object({ code: z.string(), value: z.string() })),
-			factors: z.array(z.string()),
-		})
-		.optional(),
+	forecast: ZTaskForecast.optional(),
 });
 
 export const ZComment = z.object({
@@ -339,6 +369,8 @@ export type Project = z.infer<typeof ZProject>;
 export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
+export type TaskForecast = z.infer<typeof ZTaskForecast>;
+export type TaskPrediction = z.infer<typeof ZTaskPrediction>;
 export type ProjectColumn = z.infer<typeof ZProjectColumn>;
 export type Comment = z.infer<typeof ZComment>;
 export type Invitation = z.infer<typeof ZInvitation>;

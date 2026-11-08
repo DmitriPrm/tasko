@@ -9,6 +9,7 @@ import {
 	ZTask,
 	ZTaskDependencies,
 	ZTaskHistory,
+	ZTaskPrediction,
 	ZTaskRemoveResult,
 } from "@/shared/api/v0/schemas";
 
@@ -80,4 +81,14 @@ export const addTaskDependency = createPost({
 export const removeTaskDependency = createDelete({
 	path: "/tasks/:id/dependencies/:dependencyId",
 	type: ZWrapDTO(ZTaskDependencies),
+});
+
+export const getTaskPrediction = createGet({
+	path: "/tasks/:id/prediction",
+	type: ZWrapDTO(ZTaskPrediction),
+});
+
+export const refreshTaskPrediction = createPost({
+	path: "/tasks/:id/prediction",
+	type: ZWrapDTO(ZTaskPrediction),
 });

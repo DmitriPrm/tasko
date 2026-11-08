@@ -7,6 +7,7 @@ import { computed, ref, watch } from "vue";
 import TaskAttachments from "@/pages/tasks/components/TaskAttachments.vue";
 import TaskComments from "@/pages/tasks/components/TaskComments.vue";
 import TaskDependencies from "@/pages/tasks/components/TaskDependencies.vue";
+import TaskForecast from "@/pages/tasks/components/TaskForecast.vue";
 import TaskSubtasks from "@/pages/tasks/components/TaskSubtasks.vue";
 import TaskHistory from "@/pages/tasks/components/TaskHistory.vue";
 import TaskTagField from "@/pages/tasks/components/TaskTagField.vue";
@@ -224,6 +225,12 @@ const handleRelationsChanged = async () => {
 	await fetchTask();
 };
 
+/** Прогноз имеет смысл только для открытой задачи */
+const showForecast = computed(
+	() =>
+		Boolean(task.value?.forecast) && !["DONE", "CANCELLED"].includes(task.value?.status) && !task.value?.isCompleted,
+);
+
 const findUser = (userId: string): User | undefined => memberUsers.value.find((user) => user.id === userId);
 </script>
 
@@ -352,6 +359,12 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 					</base-button>
 				</base-flex>
 
+				<task-forecast
+					v-if="taskId && showForecast"
+					:task-id="taskId"
+					:forecast="task.forecast"
+					@refreshed="emit('updated')"
+				/>
 				<button
 					v-if="task.parentTask"
 					class="task-drawer__parent"

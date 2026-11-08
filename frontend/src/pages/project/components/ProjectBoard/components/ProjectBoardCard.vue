@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { CircleCheck, CircleCheckFilled, List, Lock, Plus } from "@/shared/ui/icon/icons";
+import { CircleCheck, CircleCheckFilled, List, Lock, Plus, Warning } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
 import { computed, ref } from "vue";
 
@@ -28,6 +28,14 @@ const isDeadlineOpen = ref(false);
 
 const memberUsers = computed(() => (props.members || []).map((member) => member.user));
 const deadlineValue = computed(() => (props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : ""));
+
+/** Значок риска — только для открытых задач с высоким риском срыва срока */
+const highRisk = computed(() => {
+	const forecast = props.task.forecast;
+	if (!forecast || forecast.riskLevel !== "HIGH" || props.task.isCompleted) return null;
+	if (props.task.status === "DONE" || props.task.status === "CANCELLED") return null;
+	return Math.round(forecast.riskProbability * 100);
+});
 
 const handleOpen = () => emit("open", props.task.id);
 const handleComplete = (event: Event) => {
@@ -80,6 +88,14 @@ const handleDeadline = (value: string | "") => {
 					>
 						<el-icon :size="12" aria-hidden="true"><lock /></el-icon>
 						{{ task.openBlockersCount }}
+					</span>
+					<span
+						v-if="highRisk !== null"
+						class="project-board-card__badge project-board-card__badge--risk"
+						:title="translate('forecast.highRiskBadge')"
+					>
+						<el-icon :size="12" aria-hidden="true"><warning /></el-icon>
+						{{ highRisk }}%
 					</span>
 					<span v-if="task.subtasksCount" class="project-board-card__badge" :title="translate('task.subtasks')">
 						<el-icon :size="12" aria-hidden="true"><list /></el-icon>
@@ -213,6 +229,11 @@ const handleDeadline = (value: string | "") => {
 		&--blocked {
 			background: var(--mt-color-warning-light);
 			color: var(--mt-color-warning);
+		}
+
+		&--risk {
+			background: var(--mt-color-danger-light);
+			color: var(--mt-color-danger);
 		}
 	}
 
