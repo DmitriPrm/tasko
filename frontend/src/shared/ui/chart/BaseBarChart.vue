@@ -64,7 +64,7 @@ const tooltip = (item: BarChartItem) =>
 
 	&__row {
 		display: grid;
-		grid-template-columns: minmax(90px, 160px) 1fr minmax(40px, auto);
+		grid-template-columns: minmax(70px, 38%) 1fr minmax(24px, auto);
 		align-items: center;
 		gap: map.get($spacers, 3);
 		padding: map.get($spacers, 1) map.get($spacers, 2);

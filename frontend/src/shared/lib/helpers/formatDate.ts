@@ -38,12 +38,21 @@ export function isTaskOverdue(task: { deadlineAt?: string | null; status: string
 	return isOverdue(task.deadlineAt);
 }
 
-export type DeadlineFilter = "" | "today" | "week" | "none";
-export const DEADLINE_FILTERS: Exclude<DeadlineFilter, "">[] = ["today", "week", "none"];
+export type DeadlineFilter = "" | "overdue" | "today" | "week" | "none";
+export const DEADLINE_FILTERS: Exclude<DeadlineFilter, "">[] = ["overdue", "today", "week", "none"];
 
-/** Фильтр по сроку: сегодня, ближайшие 7 дней (включая сегодня) или без срока */
-export function matchesDeadline(task: { deadlineAt?: string | null }, filter: DeadlineFilter, now = dayjs()) {
+type DeadlineTask = { deadlineAt?: string | null; status?: string; isCompleted?: boolean | null };
+
+/** Фильтр по сроку: просрочена, сегодня, ближайшие 7 дней (включая сегодня) или без срока */
+export function matchesDeadline(task: DeadlineTask, filter: DeadlineFilter, now = dayjs()) {
 	if (!filter) return true;
+	if (filter === "overdue") {
+		return isTaskOverdue({
+			deadlineAt: task.deadlineAt,
+			status: task.status ?? "",
+			isCompleted: Boolean(task.isCompleted),
+		});
+	}
 	if (filter === "none") return !task.deadlineAt;
 	if (!task.deadlineAt) return false;
 	const deadline = dayjs(task.deadlineAt);

@@ -7,7 +7,7 @@ import ProjectAnalytics from "@/pages/project/components/ProjectAnalytics.vue";
 import ProjectBoard from "@/pages/project/components/ProjectBoard.vue";
 import ProjectMembers from "@/pages/project/components/ProjectMembers.vue";
 import ProjectTasksToolbar, {
-	type CompletedFilter,
+	type TasksSort,
 	type TasksView,
 } from "@/pages/project/components/ProjectTasksToolbar.vue";
 import ProjectEditDialog from "@/pages/projects/components/ProjectEditDialog.vue";
@@ -15,18 +15,11 @@ import TaskCreateDialog from "@/pages/project/components/TaskCreateDialog.vue";
 import { baseApi } from "@/shared/api/baseApi";
 import { openDialog } from "@/shared/lib/dialog/dialog";
 import { openConfirm } from "@/shared/lib/dialog/openConfirm";
-import type {
-	ProjectColumn,
-	ProjectMember,
-	Task,
-	TaskPriority,
-	TaskStatus,
-	TaskType,
-	User,
-} from "@/shared/api/v0/schemas";
+import type { ProjectColumn, ProjectMember, Task, User } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
-import { type DeadlineFilter, formatDate, isTaskOverdue, matchesDeadline } from "@/shared/lib/helpers/formatDate";
+import { useTaskFilters } from "@/shared/lib/composable/useTaskFilters";
+import { formatDate } from "@/shared/lib/helpers/formatDate";
 import {
 	PRIORITY_RANK,
 	priorityLabel,
@@ -36,11 +29,12 @@ import {
 	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
-import { matchesRisk, riskSortValue, type RiskLevel } from "@/shared/lib/helpers/forecast";
+import { riskSortValue } from "@/shared/lib/helpers/forecast";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
 import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
+import TaskFilterChips from "@/shared/ui/task-filters/TaskFilterChips.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 import { useAuthStore } from "@/store/auth";
 import { useFavoritesStore } from "@/store/favorites";
@@ -54,16 +48,7 @@ const taskDrawer = useTaskDrawerStore();
 const activeTab = ref("tasks");
 const tasksView = ref<TasksView>("board");
 const search = ref("");
-const filterAssigneeId = ref("");
-const filterTagId = ref("");
-const filterCompleted = ref<CompletedFilter>("all");
-const filterOverdue = ref(false);
-const filterStatus = ref<TaskStatus | "">("");
-const filterPriority = ref<TaskPriority | "">("");
-const filterRisk = ref<RiskLevel | "">("");
-const filterType = ref<TaskType | "">("");
-const filterDeadline = ref<DeadlineFilter>("");
-const riskFirst = ref(false);
+const sort = ref<TasksSort>("default");
 const lastProjectId = ref(String(route.params.id ?? ""));
 const projectId = computed(() => lastProjectId.value);
 
@@ -106,28 +91,23 @@ const members = computed(() => project.value?.members ?? []);
 const memberUsers = computed(() => members.value.map((member: ProjectMember) => member.user));
 const projectTags = computed(() => tagsState.value || project.value?.tags || []);
 
+// На доске по умолчанию видны все задачи, включая закрытые: у них своя колонка
+const filters = useTaskFilters({ state: "all" }, () => ({ users: memberUsers.value, tags: projectTags.value }));
+
 const visibleTasks = computed(() => {
-	return tasks.value.filter((task) => {
-		const query = search.value.trim().toLowerCase();
-		if (query && !task.title.toLowerCase().includes(query)) return false;
-		if (filterAssigneeId.value && task.assigneeId !== filterAssigneeId.value) return false;
-		if (filterTagId.value && !(task.tags || []).some((tag) => tag.id === filterTagId.value)) return false;
-		if (filterCompleted.value === "yes" && !task.isCompleted) return false;
-		if (filterCompleted.value === "no" && task.isCompleted) return false;
-		if (filterOverdue.value && !isTaskOverdue(task)) return false;
-		if (filterStatus.value && task.status !== filterStatus.value) return false;
-		if (filterPriority.value && task.priority !== filterPriority.value) return false;
-		if (!matchesRisk(task, filterRisk.value)) return false;
-		if (filterType.value && task.type !== filterType.value) return false;
-		if (!matchesDeadline(task, filterDeadline.value)) return false;
-		return true;
-	});
+	const query = search.value.trim().toLowerCase();
+	return tasks.value.filter((task) => (!query || task.title.toLowerCase().includes(query)) && filters.matches(task));
 });
 
-// «Сначала рискованные»: и доска, и список показывают задачи в этом порядке
-const orderedTasks = computed(() =>
-	riskFirst.value ? [...visibleTasks.value].sort((a, b) => riskSortValue(b) - riskSortValue(a)) : visibleTasks.value,
-);
+const deadlineValue = (task: Task) =>
+	task.deadlineAt ? new Date(task.deadlineAt).getTime() : Number.POSITIVE_INFINITY;
+
+// Порядок применяется и к доске (внутри колонок), и к списку
+const orderedTasks = computed(() => {
+	if (sort.value === "risk") return [...visibleTasks.value].sort((a, b) => riskSortValue(b) - riskSortValue(a));
+	if (sort.value === "deadline") return [...visibleTasks.value].sort((a, b) => deadlineValue(a) - deadlineValue(b));
+	return visibleTasks.value;
+});
 
 const canManage = computed(() => {
 	if (authStore.isAdmin) return true;
@@ -302,37 +282,21 @@ useOnTaskChange({ reload: () => handleReload() });
 			<el-tab-pane :label="translate('project.tasks')" name="tasks">
 				<project-tasks-toolbar
 					:search="search"
+					:sort="sort"
+					:filters="filters"
 					:view="tasksView"
-					:assignee-id="filterAssigneeId"
-					:tag-id="filterTagId"
-					:completed="filterCompleted"
-					:overdue="filterOverdue"
-					:status="filterStatus"
-					:priority="filterPriority"
-					:risk="filterRisk"
-					:type="filterType"
-					:deadline="filterDeadline"
-					:risk-first="riskFirst"
 					:users="memberUsers"
 					:tags="projectTags"
 					@update:search="(value) => (search = value)"
 					@update:view="(value) => (tasksView = value)"
-					@update:assignee-id="(value) => (filterAssigneeId = value)"
-					@update:tag-id="(value) => (filterTagId = value)"
-					@update:completed="(value) => (filterCompleted = value)"
-					@update:overdue="(value) => (filterOverdue = value)"
-					@update:status="(value) => (filterStatus = value)"
-					@update:priority="(value) => (filterPriority = value)"
-					@update:risk="(value) => (filterRisk = value)"
-					@update:type="(value) => (filterType = value)"
-					@update:deadline="(value) => (filterDeadline = value)"
-					@update:risk-first="(value) => (riskFirst = value)"
+					@update:sort="(value) => (sort = value)"
 				/>
+				<task-filter-chips :filters="filters" :shown="visibleTasks.length" />
 				<project-board
 					v-if="tasksView === 'board'"
 					:project-id="projectId"
 					:tasks="orderedTasks"
-					:sort-key="riskFirst ? 'risk' : ''"
+					:sort-key="sort === 'default' ? '' : sort"
 					:columns="columns"
 					:members="members"
 					:can-manage="canManage"
