@@ -1,29 +1,14 @@
-import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
-import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
-import { WrapResponseInterceptor } from "./common/interceptors/wrap-response.interceptor";
+import { configureApp } from "./app.setup";
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 
-	app.setGlobalPrefix("api");
 	app.enableShutdownHooks();
-	app.enableCors({
-		origin: process.env.FRONTEND_URL || "http://localhost:5173",
-		credentials: true,
-	});
-	app.useGlobalFilters(new HttpExceptionFilter());
-	app.useGlobalInterceptors(new WrapResponseInterceptor());
-	app.useGlobalPipes(
-		new ValidationPipe({
-			whitelist: true,
-			transform: true,
-			forbidNonWhitelisted: true,
-		}),
-	);
+	configureApp(app);
 
 	const swaggerConfig = new DocumentBuilder()
 		.setTitle("TASKO API")
