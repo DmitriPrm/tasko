@@ -10,7 +10,22 @@ WEB-система управления проектами. Проекты, за
 - Backend: NestJS, Prisma, PostgreSQL, JWT
 - Документация API: Swagger
 
-## Быстрый старт
+## Запуск одной командой (Docker)
+
+Нужен только запущенный Docker Desktop.
+
+```bash
+docker compose up -d --build
+```
+
+- UI: http://localhost:8080
+- Swagger: http://localhost:8080/docs (API напрямую — http://localhost:3100)
+
+При первом запуске применяются миграции и загружаются демо-данные (отключить: `SEED_DEMO=false`).
+Порты меняются переменными `WEB_PORT` и `API_PORT`. Сервис прогноза — отдельным профилем:
+`docker compose --profile ml up -d` (сначала обучите модели, см. [`ml/README.md`](ml/README.md)).
+
+## Запуск для разработки
 
 Нужны Node.js 22 и запущенный Docker Desktop.
 
@@ -55,14 +70,20 @@ cd ml
 cd backend
 npm run lint          # ESLint
 npm run format:check  # Prettier (npm run format — исправить)
-npm test              # Jest
+npm test              # Jest, модульные тесты
+npm run test:e2e      # интеграционные тесты API на базе tasko_test (нужен docker compose up -d postgres)
 
 cd ../frontend
 npm run lint
 npm run format:check
 npm test              # Vitest
 npm run typecheck     # vue-tsc
+npm run test:e2e      # сквозной сценарий в Chrome (Playwright), против http://localhost:8080
 ```
+
+Базу для интеграционных тестов создать один раз:
+`docker exec tasko-postgres psql -U tasko -d postgres -c "create database tasko_test"`.
+Какие критерии приёмки чем проверяются — [docs/acceptance.md](docs/acceptance.md).
 
 Общие настройки форматирования — в `.prettierrc.json` и `.editorconfig` в корне.
 
