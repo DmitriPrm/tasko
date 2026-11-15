@@ -28,9 +28,11 @@ import {
 	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
+import { matchesRisk, riskSortValue, type RiskLevel } from "@/shared/lib/helpers/forecast";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
+import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 import { useAuthStore } from "@/store/auth";
 import { useFavoritesStore } from "@/store/favorites";
@@ -50,6 +52,8 @@ const filterCompleted = ref<CompletedFilter>("all");
 const filterOverdue = ref(false);
 const filterStatus = ref<TaskStatus | "">("");
 const filterPriority = ref<TaskPriority | "">("");
+const filterRisk = ref<RiskLevel | "">("");
+const riskFirst = ref(false);
 const lastProjectId = ref(String(route.params.id ?? ""));
 const projectId = computed(() => lastProjectId.value);
 
@@ -103,9 +107,15 @@ const visibleTasks = computed(() => {
 		if (filterOverdue.value && !isTaskOverdue(task)) return false;
 		if (filterStatus.value && task.status !== filterStatus.value) return false;
 		if (filterPriority.value && task.priority !== filterPriority.value) return false;
+		if (!matchesRisk(task, filterRisk.value)) return false;
 		return true;
 	});
 });
+
+// «Сначала рискованные»: и доска, и список показывают задачи в этом порядке
+const orderedTasks = computed(() =>
+	riskFirst.value ? [...visibleTasks.value].sort((a, b) => riskSortValue(b) - riskSortValue(a)) : visibleTasks.value,
+);
 
 const canManage = computed(() => {
 	if (authStore.isAdmin) return true;
@@ -197,6 +207,7 @@ const taskColumns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
 	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
+	{ key: "risk", label: translate("forecast.risk"), sortValue: (row: Task) => riskSortValue(row) },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 
@@ -284,6 +295,8 @@ useOnTaskChange({ reload: () => handleReload() });
 					:overdue="filterOverdue"
 					:status="filterStatus"
 					:priority="filterPriority"
+					:risk="filterRisk"
+					:risk-first="riskFirst"
 					:users="memberUsers"
 					:tags="projectTags"
 					@update:search="(value) => (search = value)"
@@ -294,11 +307,14 @@ useOnTaskChange({ reload: () => handleReload() });
 					@update:overdue="(value) => (filterOverdue = value)"
 					@update:status="(value) => (filterStatus = value)"
 					@update:priority="(value) => (filterPriority = value)"
+					@update:risk="(value) => (filterRisk = value)"
+					@update:risk-first="(value) => (riskFirst = value)"
 				/>
 				<project-board
 					v-if="tasksView === 'board'"
 					:project-id="projectId"
-					:tasks="visibleTasks"
+					:tasks="orderedTasks"
+					:sort-key="riskFirst ? 'risk' : ''"
 					:columns="columns"
 					:members="members"
 					:can-manage="canManage"
@@ -314,7 +330,7 @@ useOnTaskChange({ reload: () => handleReload() });
 				<base-table
 					v-else
 					code="project-tasks"
-					:rows="visibleTasks"
+					:rows="orderedTasks"
 					:columns="taskColumns"
 					@row-click="handleTaskClick"
 				>
@@ -322,6 +338,7 @@ useOnTaskChange({ reload: () => handleReload() });
 						<el-tag :type="statusTagType[row.status]" size="small">{{ statusLabel(row.status) }}</el-tag>
 					</template>
 					<template #priority="{ row }">{{ priorityLabel(row.priority) }}</template>
+					<template #risk="{ row }"><task-risk-tag :task="row" /></template>
 					<template #assignee="{ row }">
 						<base-user-name :user="row.assignee" />
 					</template>

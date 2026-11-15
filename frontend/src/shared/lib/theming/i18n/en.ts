@@ -277,6 +277,23 @@ export const en = {
 		byStatus: "By status",
 		byRisk: "By risk",
 	},
+	riskAnalytics: {
+		title: "Deadline risks",
+		titleInfo: "Open tasks by risk level. Click a level to see its tasks.",
+		noTasks: "No tasks with this risk",
+		durations: "Plan, forecast and actual",
+		durationsInfo:
+			"How much time was planned, how much the model predicted and how long it actually took. The last 50 closed tasks are used.",
+		planned: "Plan",
+		predicted: "Forecast",
+		actual: "Actual",
+		error: "Forecast error",
+		avgPlanned: "Average planned",
+		avgPredicted: "Average forecast",
+		avgActual: "Average actual",
+		mae: "Average forecast error",
+		noClosed: "No closed tasks yet",
+	},
 	users: {
 		title: "Users",
 		create: "New user",
@@ -305,6 +322,7 @@ export const en = {
 	},
 	forecast: {
 		title: "Forecast",
+		riskFirst: "Riskiest first",
 		risk: "Risk of missing the deadline",
 		hours: "h",
 		refresh: "Recalculate",

@@ -11,6 +11,7 @@ export const ZNotificationType = z.enum([
 	"DEADLINE_CHANGED",
 	"STATUS_CHANGED",
 	"DEADLINE_APPROACHING",
+	"HIGH_RISK",
 	"PROJECT_INVITATION",
 ]);
 
@@ -319,6 +320,43 @@ export const ZAnalyticsOverview = z.object({
 	medianDurationHours: z.number(),
 });
 
+export const ZRiskAnalytics = z.object({
+	byRisk: z.object({ LOW: z.number(), MEDIUM: z.number(), HIGH: z.number() }),
+	tasks: z.array(
+		z.object({
+			id: z.string(),
+			title: z.string(),
+			status: ZTaskStatus,
+			deadlineAt: z.string().nullable(),
+			assignee: ZUser.nullable(),
+			riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
+			riskProbability: z.number(),
+			durationHours: z.number(),
+			source: z.enum(["ML", "RULES"]),
+		}),
+	),
+	durations: z.object({
+		summary: z.object({
+			closed: z.number(),
+			withPrediction: z.number(),
+			maeHours: z.number().nullable(),
+			avgPlannedHours: z.number().nullable(),
+			avgPredictedHours: z.number().nullable(),
+			avgActualHours: z.number().nullable(),
+		}),
+		rows: z.array(
+			z.object({
+				taskId: z.string(),
+				title: z.string(),
+				plannedHours: z.number().nullable(),
+				predictedHours: z.number().nullable(),
+				actualHours: z.number().nullable(),
+				errorHours: z.number().nullable(),
+			}),
+		),
+	}),
+});
+
 export const ZWorkloadItem = z.object({
 	userId: z.string(),
 	fullName: z.string(),
@@ -369,6 +407,7 @@ export type Project = z.infer<typeof ZProject>;
 export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
+export type RiskAnalytics = z.infer<typeof ZRiskAnalytics>;
 export type TaskForecast = z.infer<typeof ZTaskForecast>;
 export type TaskPrediction = z.infer<typeof ZTaskPrediction>;
 export type ProjectColumn = z.infer<typeof ZProjectColumn>;

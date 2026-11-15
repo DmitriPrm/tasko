@@ -54,3 +54,4 @@ Swagger: `http://localhost:3000/docs`
 - `PATCH /notifications/:id/read`
 - `GET /projects/:id/analytics/overview`
 - `GET /projects/:id/analytics/workload`
+- `GET /projects/:id/analytics/risks` — открытые задачи по уровню риска и сравнение плановой, прогнозной и фактической длительности последних 50 закрытых задач

@@ -30,6 +30,8 @@ const props = withDefaults(
 		loading?: boolean;
 		pageSize?: number;
 		rowKey?: string;
+		/** Текст пустой таблицы; по умолчанию «Нет данных» */
+		emptyText?: string;
 	}>(),
 	{
 		pageSize: 15,
@@ -282,7 +284,7 @@ watch(layoutState, (layout) => {
 				</thead>
 				<tbody>
 					<tr v-if="!loading && !visibleRows.length">
-						<td class="base-table__empty" :colspan="columns.length">{{ translate("common.empty") }}</td>
+						<td class="base-table__empty" :colspan="columns.length">{{ emptyText || translate("common.empty") }}</td>
 					</tr>
 					<tr v-for="row in visibleRows" :key="String(row[rowKey])" @click="() => handleRowClick(row)">
 						<td v-for="column in columns" :key="column.key">

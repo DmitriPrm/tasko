@@ -53,6 +53,7 @@ enum NotificationType {
   STATUS_CHANGED
   DEADLINE_APPROACHING
   PROJECT_INVITATION
+  HIGH_RISK
 }
 
 enum DependencyType {

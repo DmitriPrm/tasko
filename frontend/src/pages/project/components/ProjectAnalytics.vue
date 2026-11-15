@@ -5,6 +5,7 @@ import { baseApi } from "@/shared/api/baseApi";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { statusLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
+import ProjectRiskAnalytics from "@/pages/project/components/ProjectRiskAnalytics.vue";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
@@ -57,6 +58,7 @@ const workloadColumns = computed(() => [
 				{{ statusLabel(String(status)) }}: {{ count }}
 			</el-tag>
 		</base-flex>
+		<project-risk-analytics :project-id="projectId" />
 		<h4>{{ translate("analytics.workload") }}</h4>
 		<base-table code="project-workload" :rows="workload || []" :columns="workloadColumns" row-key="userId">
 			<template #fullName="{ row }">

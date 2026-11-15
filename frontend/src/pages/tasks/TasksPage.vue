@@ -5,9 +5,11 @@ import { baseApi } from "@/shared/api/baseApi";
 import type { Task } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
+import { matchesRisk, RISK_LEVELS, riskSortValue, type RiskLevel } from "@/shared/lib/helpers/forecast";
 import { formatDate } from "@/shared/lib/helpers/formatDate";
 import { PRIORITY_RANK, priorityLabel, STATUS_RANK, statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
+import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
@@ -18,6 +20,7 @@ const authStore = useAuthStore();
 const taskDrawer = useTaskDrawerStore();
 const status = ref<string>("");
 const onlyMine = ref(true);
+const risk = ref<RiskLevel | "">("");
 
 const params = computed(() => ({
 	status: status.value || undefined,
@@ -30,12 +33,15 @@ const { state, isLoading, fetch } = useFetch(baseApi.tasks.getTasks, "data.items
 	params,
 });
 
+const rows = computed(() => ((state.value || []) as Task[]).filter((task) => matchesRisk(task, risk.value)));
+
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
 	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
 	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "deadlineAt", label: translate("task.deadline") },
+	{ key: "risk", label: translate("forecast.risk"), sortValue: (row: Task) => riskSortValue(row) },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 
@@ -58,15 +64,24 @@ useOnTaskChange({ reload: () => fetch() });
 					<el-option :label="translate('taskStatus.DONE')" value="DONE" />
 					<el-option :label="translate('taskStatus.CANCELLED')" value="CANCELLED" />
 				</el-select>
+				<el-select v-model="risk" class="tasks-page__status" clearable :placeholder="translate('forecast.risk')">
+					<el-option
+						v-for="item in RISK_LEVELS"
+						:key="item"
+						:label="translate(`forecast.${item.toLowerCase()}`)"
+						:value="item"
+					/>
+				</el-select>
 			</base-flex>
 		</template>
-		<base-table code="tasks" :rows="state || []" :columns="columns" :loading="isLoading" @row-click="handleRowClick">
+		<base-table code="tasks" :rows="rows" :columns="columns" :loading="isLoading" @row-click="handleRowClick">
 			<template #project="{ row }">{{ row.project?.name }}</template>
 			<template #status="{ row }">
 				<el-tag :type="statusTagType[row.status]" size="small">{{ statusLabel(row.status) }}</el-tag>
 			</template>
 			<template #priority="{ row }">{{ priorityLabel(row.priority) }}</template>
 			<template #deadlineAt="{ row }">{{ formatDate(row.deadlineAt) || "—" }}</template>
+			<template #risk="{ row }"><task-risk-tag :task="row" /></template>
 			<template #assignee="{ row }">
 				<base-user-name :user="row.assignee" />
 			</template>

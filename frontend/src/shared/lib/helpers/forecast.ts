@@ -44,3 +44,24 @@ export const impactTitle = (factor: ForecastFactor) =>
 /** Причины по правилам (OVERDUE, TIGHT_DEADLINE…) в виде текста */
 export const ruleFactorLabels = (forecast: TaskForecast) =>
 	forecast.factors.map((code) => translate(`forecast.factor.${code}`));
+
+export type RiskLevel = TaskForecast["riskLevel"];
+export const RISK_LEVELS: RiskLevel[] = ["HIGH", "MEDIUM", "LOW"];
+
+type ForecastTask = {
+	status: string;
+	isCompleted?: boolean | null;
+	forecast?: TaskForecast | null;
+};
+
+/** Прогноз имеет смысл только для открытой задачи: у закрытой исход уже известен */
+export function openTaskForecast(task: ForecastTask): TaskForecast | null {
+	if (!task.forecast || task.isCompleted || task.status === "DONE" || task.status === "CANCELLED") return null;
+	return task.forecast;
+}
+
+/** Значение для сортировки по риску: закрытые задачи — в конце */
+export const riskSortValue = (task: ForecastTask) => openTaskForecast(task)?.riskProbability ?? -1;
+
+export const matchesRisk = (task: ForecastTask, level: RiskLevel | "") =>
+	!level || openTaskForecast(task)?.riskLevel === level;

@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { AuthUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RiskAlertsService } from "../notifications/risk-alerts.service";
 import { PredictionsService } from "../predictions/predictions.service";
 import { buildForecast } from "./forecast";
 import { TasksService } from "./tasks.service";
@@ -15,6 +16,7 @@ export class TaskPredictionController {
 	constructor(
 		private readonly tasks: TasksService,
 		private readonly predictions: PredictionsService,
+		private readonly riskAlerts: RiskAlertsService,
 	) {}
 
 	/** Текущий прогноз и история пересчётов */
@@ -29,6 +31,7 @@ export class TaskPredictionController {
 	async refresh(@CurrentUser() user: AuthUser, @Param("id") id: string) {
 		const task = await this.tasks.getViewableTask(user, id);
 		const prediction = await this.predictions.refresh(id, PredictionTrigger.MANUAL);
+		if (prediction) await this.riskAlerts.checkTask(id);
 		return {
 			...(await this.response(prediction ? { ...task, predictions: [prediction] } : task)),
 			refreshed: prediction !== null,

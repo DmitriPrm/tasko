@@ -8,6 +8,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { latestPredictionInclude } from "../predictions/predictions.service";
 import { buildForecast } from "../tasks/forecast";
+import { toUserDto } from "../users/user.mapper";
+import { compareDurations, summarizeRisks } from "./risk-analytics";
 
 @Injectable()
 export class AnalyticsService {
@@ -59,8 +61,10 @@ export class AnalyticsService {
 				: (durations[middle - 1] + durations[middle]) / 2
 			: 0;
 
+		// Риск считаем только по открытым задачам: у закрытых исход уже известен
 		const byRisk = { LOW: 0, MEDIUM: 0, HIGH: 0 };
 		for (const task of tasks) {
+			if (task.status === TaskStatus.DONE || task.status === TaskStatus.CANCELLED || task.isCompleted) continue;
 			byRisk[buildForecast(task, now).riskLevel] += 1;
 		}
 
@@ -73,6 +77,69 @@ export class AnalyticsService {
 			onTimeRate: completed.length ? completedOnTime.length / completed.length : 0,
 			averageDurationHours,
 			medianDurationHours,
+		};
+	}
+
+	/** Риски открытых задач и сравнение плановой, прогнозной и фактической длительности закрытых */
+	async risks(user: AuthUser, projectId: string) {
+		await this.projectAccess.assertCanView(projectId, user);
+		const now = new Date();
+
+		const [open, closed] = await Promise.all([
+			this.prisma.task.findMany({
+				where: { projectId, isCompleted: false, status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] } },
+				include: { assignee: true, ...latestPredictionInclude },
+			}),
+			this.prisma.task.findMany({
+				where: { projectId, status: TaskStatus.DONE, completedAt: { not: null } },
+				orderBy: { completedAt: "desc" },
+				take: 50,
+				include: {
+					// Первый прогноз — сделанный до начала работы, его и сравниваем с фактом
+					predictions: { orderBy: { createdAt: "asc" }, take: 1, select: { durationHours: true } },
+					statusHistory: {
+						where: { toStatus: TaskStatus.IN_PROGRESS },
+						orderBy: { changedAt: "asc" },
+						take: 1,
+						select: { changedAt: true },
+					},
+				},
+			}),
+		]);
+
+		const { byRisk, ranked } = summarizeRisks(open.map((task) => ({ task, forecast: buildForecast(task, now) })));
+		const durations = compareDurations(
+			closed.map((task) => ({
+				id: task.id,
+				status: task.status,
+				createdAt: task.createdAt,
+				actualStartAt: task.actualStartAt,
+				completedAt: task.completedAt,
+				deadlineAt: task.deadlineAt,
+				plannedStartAt: task.plannedStartAt,
+				firstProgressAt: task.statusHistory[0]?.changedAt ?? null,
+				predictedHours: task.predictions[0]?.durationHours ?? null,
+			})),
+		);
+		const titles = new Map(closed.map((task) => [task.id, task.title]));
+
+		return {
+			byRisk,
+			tasks: ranked.map(({ task, forecast }) => ({
+				id: task.id,
+				title: task.title,
+				status: task.status,
+				deadlineAt: task.deadlineAt?.toISOString() ?? null,
+				assignee: task.assignee ? toUserDto(task.assignee) : null,
+				riskLevel: forecast.riskLevel,
+				riskProbability: forecast.riskProbability,
+				durationHours: forecast.durationHours,
+				source: forecast.source,
+			})),
+			durations: {
+				summary: durations.summary,
+				rows: durations.rows.map((row) => ({ ...row, title: titles.get(row.taskId) ?? "" })),
+			},
 		};
 	}
 

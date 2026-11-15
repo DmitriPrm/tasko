@@ -33,6 +33,8 @@ const props = defineProps<{
 	members?: ProjectMember[];
 	canManage?: boolean;
 	canCreate?: boolean;
+	/** Задан — карточки всегда идут в порядке tasks (например, «сначала рискованные») */
+	sortKey?: string;
 }>();
 
 const isDragging = ref(false);
@@ -67,7 +69,7 @@ const isSameLayout = (groups: Record<string, Task[]>) =>
 
 const applyTasks = (tasks: Task[]) => {
 	const groups = groupTasks(tasks);
-	if (!isSameLayout(groups)) {
+	if (props.sortKey || !isSameLayout(groups)) {
 		lists.value = groups;
 		return;
 	}
@@ -79,7 +81,7 @@ const applyTasks = (tasks: Task[]) => {
 };
 
 watch(
-	() => [props.tasks, props.columns] as const,
+	() => [props.tasks, props.columns, props.sortKey] as const,
 	([tasks]) => {
 		if (isDragging.value) {
 			syncAfterDrag = true;

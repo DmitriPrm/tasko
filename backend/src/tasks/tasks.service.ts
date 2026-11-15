@@ -5,6 +5,7 @@ import { AccessService } from "../access/access.service";
 import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RiskAlertsService } from "../notifications/risk-alerts.service";
 import { latestPredictionInclude, PredictionsService, StoredPrediction } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
@@ -64,6 +65,7 @@ export class TasksService {
 		private readonly notifications: NotificationsService,
 		private readonly access: AccessService,
 		private readonly predictions: PredictionsService,
+		private readonly riskAlerts: RiskAlertsService,
 	) {}
 
 	async listByProject(user: AuthUser, projectId: string, query: TasksQueryDto) {
@@ -187,6 +189,7 @@ export class TasksService {
 		}
 
 		const prediction = await this.predictions.refresh(task.id, PredictionTrigger.CREATED);
+		await this.riskAlerts.checkTask(task.id);
 		return toTaskDto(withPrediction(task, prediction));
 	}
 
@@ -296,6 +299,7 @@ export class TasksService {
 
 		const affectsPrediction = Boolean(dto.tagIds) || changes.some((change) => PREDICTION_FIELDS.has(change.fieldName));
 		const prediction = affectsPrediction ? await this.predictions.refresh(taskId, PredictionTrigger.UPDATED) : null;
+		if (affectsPrediction) await this.riskAlerts.checkTask(taskId);
 		return toTaskDto(withPrediction(updated, prediction));
 	}
 

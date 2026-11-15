@@ -2,6 +2,7 @@ import { TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RiskAlertsService } from "../notifications/risk-alerts.service";
 import { PredictionsService } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
@@ -35,6 +36,7 @@ describe("TasksService", () => {
 
 	const access = { assert: jest.fn() };
 	const predictions = { refresh: jest.fn() };
+	const riskAlerts = { checkTask: jest.fn() };
 
 	const service = new TasksService(
 		prisma as unknown as PrismaService,
@@ -42,6 +44,7 @@ describe("TasksService", () => {
 		notifications as unknown as NotificationsService,
 		access as unknown as AccessService,
 		predictions as unknown as PredictionsService,
+		riskAlerts as unknown as RiskAlertsService,
 	);
 
 	const actor = {
@@ -146,6 +149,7 @@ describe("TasksService", () => {
 		const result = await service.update(actor, "t1", { priority: "CRITICAL" });
 
 		expect(predictions.refresh).toHaveBeenCalledWith("t1", "UPDATED");
+		expect(riskAlerts.checkTask).toHaveBeenCalledWith("t1");
 		expect(result.forecast).toMatchObject({ source: "ML", riskLevel: "HIGH", durationHours: 30 });
 	});
 
@@ -235,6 +239,7 @@ describe("TasksService.list access", () => {
 		{} as unknown as NotificationsService,
 		{} as unknown as AccessService,
 		{} as unknown as PredictionsService,
+		{} as unknown as RiskAlertsService,
 	);
 
 	const executor = {

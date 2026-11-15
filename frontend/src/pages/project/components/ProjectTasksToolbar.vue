@@ -2,6 +2,7 @@
 import { Board, Filter as FilterIcon, List, Search } from "@/shared/ui/icon/icons";
 
 import type { Tag, TaskPriority, TaskStatus, User } from "@/shared/api/v0/schemas";
+import { RISK_LEVELS, type RiskLevel } from "@/shared/lib/helpers/forecast";
 import { priorityLabel, statusLabel } from "@/shared/lib/helpers/labels";
 import { BOARD_COLUMNS } from "@/shared/lib/helpers/taskTransitions";
 import { translate } from "@/shared/lib/theming/i18n/translate";
@@ -19,6 +20,8 @@ const emit = defineEmits<{
 	"update:overdue": [value: boolean];
 	"update:status": [value: TaskStatus | ""];
 	"update:priority": [value: TaskPriority | ""];
+	"update:risk": [value: RiskLevel | ""];
+	"update:riskFirst": [value: boolean];
 }>();
 
 defineProps<{
@@ -30,6 +33,8 @@ defineProps<{
 	overdue?: boolean;
 	status?: TaskStatus | "";
 	priority?: TaskPriority | "";
+	risk?: RiskLevel | "";
+	riskFirst?: boolean;
 	users: User[];
 	tags: Tag[];
 }>();
@@ -45,6 +50,8 @@ const handleCompleted = (value: CompletedFilter) => emit("update:completed", val
 const handleOverdue = (value: boolean) => emit("update:overdue", value);
 const handleStatus = (value: TaskStatus | "") => emit("update:status", value || "");
 const handlePriority = (value: TaskPriority | "") => emit("update:priority", value || "");
+const handleRisk = (value: RiskLevel | "") => emit("update:risk", value || "");
+const handleRiskFirst = (value: boolean) => emit("update:riskFirst", value);
 </script>
 
 <template>
@@ -106,6 +113,26 @@ const handlePriority = (value: TaskPriority | "") => emit("update:priority", val
 						>
 							<el-option v-for="item in priorities" :key="item" :label="priorityLabel(item)" :value="item" />
 						</el-select>
+						<el-select
+							:model-value="risk"
+							clearable
+							:teleported="false"
+							:placeholder="translate('forecast.risk')"
+							@change="(value: RiskLevel) => handleRisk(value || '')"
+						>
+							<el-option
+								v-for="item in RISK_LEVELS"
+								:key="item"
+								:label="translate(`forecast.${item.toLowerCase()}`)"
+								:value="item"
+							/>
+						</el-select>
+						<el-checkbox
+							:model-value="riskFirst"
+							@update:model-value="(value: boolean) => handleRiskFirst(Boolean(value))"
+						>
+							{{ translate("forecast.riskFirst") }}
+						</el-checkbox>
 						<el-checkbox :model-value="overdue" @update:model-value="(value: boolean) => handleOverdue(Boolean(value))">
 							{{ translate("task.overdue") }}
 						</el-checkbox>
