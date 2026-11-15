@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { Board, Filter as FilterIcon, List, Search } from "@/shared/ui/icon/icons";
 
-import type { Tag, TaskPriority, TaskStatus, User } from "@/shared/api/v0/schemas";
+import type { Tag, TaskPriority, TaskStatus, TaskType, User } from "@/shared/api/v0/schemas";
 import { RISK_LEVELS, type RiskLevel } from "@/shared/lib/helpers/forecast";
-import { priorityLabel, statusLabel } from "@/shared/lib/helpers/labels";
+import { DEADLINE_FILTERS, type DeadlineFilter } from "@/shared/lib/helpers/formatDate";
+import { priorityLabel, statusLabel, typeLabel } from "@/shared/lib/helpers/labels";
 import { BOARD_COLUMNS } from "@/shared/lib/helpers/taskTransitions";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseUserSelect from "@/shared/ui/select/BaseUserSelect.vue";
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 	"update:status": [value: TaskStatus | ""];
 	"update:priority": [value: TaskPriority | ""];
 	"update:risk": [value: RiskLevel | ""];
+	"update:type": [value: TaskType | ""];
+	"update:deadline": [value: DeadlineFilter];
 	"update:riskFirst": [value: boolean];
 }>();
 
@@ -34,12 +37,15 @@ defineProps<{
 	status?: TaskStatus | "";
 	priority?: TaskPriority | "";
 	risk?: RiskLevel | "";
+	type?: TaskType | "";
+	deadline?: DeadlineFilter;
 	riskFirst?: boolean;
 	users: User[];
 	tags: Tag[];
 }>();
 
 const priorities: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+const types: TaskType[] = ["TASK", "FEATURE", "BUG", "RESEARCH"];
 
 const handleSearch = (value: string) => emit("update:search", value);
 const handleView = (value: TasksView) => emit("update:view", value);
@@ -51,6 +57,8 @@ const handleOverdue = (value: boolean) => emit("update:overdue", value);
 const handleStatus = (value: TaskStatus | "") => emit("update:status", value || "");
 const handlePriority = (value: TaskPriority | "") => emit("update:priority", value || "");
 const handleRisk = (value: RiskLevel | "") => emit("update:risk", value || "");
+const handleType = (value: TaskType | "") => emit("update:type", value || "");
+const handleDeadline = (value: DeadlineFilter) => emit("update:deadline", value || "");
 const handleRiskFirst = (value: boolean) => emit("update:riskFirst", value);
 </script>
 
@@ -112,6 +120,29 @@ const handleRiskFirst = (value: boolean) => emit("update:riskFirst", value);
 							@change="(value: TaskPriority) => handlePriority(value || '')"
 						>
 							<el-option v-for="item in priorities" :key="item" :label="priorityLabel(item)" :value="item" />
+						</el-select>
+						<el-select
+							:model-value="type"
+							clearable
+							:teleported="false"
+							:placeholder="translate('task.type')"
+							@change="(value: TaskType) => handleType(value || '')"
+						>
+							<el-option v-for="item in types" :key="item" :label="typeLabel(item)" :value="item" />
+						</el-select>
+						<el-select
+							:model-value="deadline"
+							clearable
+							:teleported="false"
+							:placeholder="translate('task.deadline')"
+							@change="(value: DeadlineFilter) => handleDeadline(value || '')"
+						>
+							<el-option
+								v-for="item in DEADLINE_FILTERS"
+								:key="item"
+								:label="translate(`task.deadlineFilter.${item}`)"
+								:value="item"
+							/>
 						</el-select>
 						<el-select
 							:model-value="risk"

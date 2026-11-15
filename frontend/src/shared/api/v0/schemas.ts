@@ -358,6 +358,7 @@ export const ZRiskAnalytics = z.object({
 });
 
 export const ZWorkloadItem = z.object({
+	forecastHours: z.number().optional(),
 	userId: z.string(),
 	fullName: z.string(),
 	email: z.string(),
@@ -376,6 +377,7 @@ export const ZDashboard = z.object({
 	projects: z.array(ZProject),
 	myTasks: z.array(ZTask),
 	upcomingDeadlines: z.array(ZTask),
+	riskyTasks: z.array(ZTask).default([]),
 });
 
 export const ZTableLayout = z.object({
@@ -407,6 +409,7 @@ export type Project = z.infer<typeof ZProject>;
 export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
+export type WorkloadItem = z.infer<typeof ZWorkloadItem>;
 export type RiskAnalytics = z.infer<typeof ZRiskAnalytics>;
 export type TaskForecast = z.infer<typeof ZTaskForecast>;
 export type TaskPrediction = z.infer<typeof ZTaskPrediction>;

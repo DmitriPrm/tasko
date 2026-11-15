@@ -28,6 +28,7 @@ const summaryCards = computed(() => [
 const projects = computed(() => state.value?.projects ?? []);
 const myTasks = computed(() => state.value?.myTasks ?? []);
 const upcoming = computed(() => state.value?.upcomingDeadlines ?? []);
+const risky = computed(() => state.value?.riskyTasks ?? []);
 
 const handleOpenProject = (projectId: string) => {
 	router.push({ name: "project", params: { id: projectId } });
@@ -83,6 +84,7 @@ useOnTaskChange({ reload: () => fetch() });
 				<base-flex :gap="6" wrap="wrap">
 					<dashboard-task-list :title="translate('task.my')" :tasks="myTasks" />
 					<dashboard-task-list :title="translate('task.upcoming')" :tasks="upcoming" deadlines />
+					<dashboard-task-list :title="translate('forecast.highRiskBadge')" :tasks="risky" risk />
 				</base-flex>
 			</base-flex>
 		</el-skeleton>

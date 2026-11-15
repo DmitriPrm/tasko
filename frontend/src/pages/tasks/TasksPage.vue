@@ -2,12 +2,19 @@
 import { computed, ref } from "vue";
 
 import { baseApi } from "@/shared/api/baseApi";
-import type { Task } from "@/shared/api/v0/schemas";
+import type { Task, TaskType } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
 import { matchesRisk, RISK_LEVELS, riskSortValue, type RiskLevel } from "@/shared/lib/helpers/forecast";
-import { formatDate } from "@/shared/lib/helpers/formatDate";
-import { PRIORITY_RANK, priorityLabel, STATUS_RANK, statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
+import { DEADLINE_FILTERS, type DeadlineFilter, formatDate, matchesDeadline } from "@/shared/lib/helpers/formatDate";
+import {
+	PRIORITY_RANK,
+	priorityLabel,
+	STATUS_RANK,
+	statusLabel,
+	statusTagType,
+	typeLabel,
+} from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import BasePage from "@/shared/ui/page/BasePage.vue";
@@ -21,9 +28,13 @@ const taskDrawer = useTaskDrawerStore();
 const status = ref<string>("");
 const onlyMine = ref(true);
 const risk = ref<RiskLevel | "">("");
+const type = ref<TaskType | "">("");
+const deadline = ref<DeadlineFilter>("");
+const types: TaskType[] = ["TASK", "FEATURE", "BUG", "RESEARCH"];
 
 const params = computed(() => ({
 	status: status.value || undefined,
+	type: type.value || undefined,
 	assigneeId: onlyMine.value ? authStore.user?.id : undefined,
 	perPage: 100,
 }));
@@ -33,15 +44,20 @@ const { state, isLoading, fetch } = useFetch(baseApi.tasks.getTasks, "data.items
 	params,
 });
 
-const rows = computed(() => ((state.value || []) as Task[]).filter((task) => matchesRisk(task, risk.value)));
+const rows = computed(() =>
+	((state.value || []) as Task[]).filter(
+		(task) => matchesRisk(task, risk.value) && matchesDeadline(task, deadline.value),
+	),
+);
 
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
 	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
 	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
-	{ key: "deadlineAt", label: translate("task.deadline") },
+	{ key: "deadlineAt", label: translate("task.deadline"), sortValue: (row: Task) => row.deadlineAt ?? "" },
 	{ key: "risk", label: translate("forecast.risk"), sortValue: (row: Task) => riskSortValue(row) },
+	{ key: "createdAt", label: translate("task.createdAt"), sortValue: (row: Task) => row.createdAt },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 
@@ -64,6 +80,17 @@ useOnTaskChange({ reload: () => fetch() });
 					<el-option :label="translate('taskStatus.DONE')" value="DONE" />
 					<el-option :label="translate('taskStatus.CANCELLED')" value="CANCELLED" />
 				</el-select>
+				<el-select v-model="type" class="tasks-page__status" clearable :placeholder="translate('task.type')">
+					<el-option v-for="item in types" :key="item" :label="typeLabel(item)" :value="item" />
+				</el-select>
+				<el-select v-model="deadline" class="tasks-page__status" clearable :placeholder="translate('task.deadline')">
+					<el-option
+						v-for="item in DEADLINE_FILTERS"
+						:key="item"
+						:label="translate(`task.deadlineFilter.${item}`)"
+						:value="item"
+					/>
+				</el-select>
 				<el-select v-model="risk" class="tasks-page__status" clearable :placeholder="translate('forecast.risk')">
 					<el-option
 						v-for="item in RISK_LEVELS"
@@ -82,6 +109,7 @@ useOnTaskChange({ reload: () => fetch() });
 			<template #priority="{ row }">{{ priorityLabel(row.priority) }}</template>
 			<template #deadlineAt="{ row }">{{ formatDate(row.deadlineAt) || "—" }}</template>
 			<template #risk="{ row }"><task-risk-tag :task="row" /></template>
+			<template #createdAt="{ row }">{{ formatDate(row.createdAt) }}</template>
 			<template #assignee="{ row }">
 				<base-user-name :user="row.assignee" />
 			</template>

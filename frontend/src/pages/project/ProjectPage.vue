@@ -15,10 +15,18 @@ import TaskCreateDialog from "@/pages/project/components/TaskCreateDialog.vue";
 import { baseApi } from "@/shared/api/baseApi";
 import { openDialog } from "@/shared/lib/dialog/dialog";
 import { openConfirm } from "@/shared/lib/dialog/openConfirm";
-import type { ProjectColumn, ProjectMember, Task, TaskPriority, TaskStatus, User } from "@/shared/api/v0/schemas";
+import type {
+	ProjectColumn,
+	ProjectMember,
+	Task,
+	TaskPriority,
+	TaskStatus,
+	TaskType,
+	User,
+} from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
-import { isTaskOverdue } from "@/shared/lib/helpers/formatDate";
+import { type DeadlineFilter, formatDate, isTaskOverdue, matchesDeadline } from "@/shared/lib/helpers/formatDate";
 import {
 	PRIORITY_RANK,
 	priorityLabel,
@@ -53,6 +61,8 @@ const filterOverdue = ref(false);
 const filterStatus = ref<TaskStatus | "">("");
 const filterPriority = ref<TaskPriority | "">("");
 const filterRisk = ref<RiskLevel | "">("");
+const filterType = ref<TaskType | "">("");
+const filterDeadline = ref<DeadlineFilter>("");
 const riskFirst = ref(false);
 const lastProjectId = ref(String(route.params.id ?? ""));
 const projectId = computed(() => lastProjectId.value);
@@ -108,6 +118,8 @@ const visibleTasks = computed(() => {
 		if (filterStatus.value && task.status !== filterStatus.value) return false;
 		if (filterPriority.value && task.priority !== filterPriority.value) return false;
 		if (!matchesRisk(task, filterRisk.value)) return false;
+		if (filterType.value && task.type !== filterType.value) return false;
+		if (!matchesDeadline(task, filterDeadline.value)) return false;
 		return true;
 	});
 });
@@ -208,6 +220,8 @@ const taskColumns = computed(() => [
 	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
 	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "risk", label: translate("forecast.risk"), sortValue: (row: Task) => riskSortValue(row) },
+	{ key: "deadlineAt", label: translate("task.deadline"), sortValue: (row: Task) => row.deadlineAt ?? "" },
+	{ key: "createdAt", label: translate("task.createdAt"), sortValue: (row: Task) => row.createdAt },
 	{ key: "assignee", label: translate("task.assignee") },
 ]);
 
@@ -296,6 +310,8 @@ useOnTaskChange({ reload: () => handleReload() });
 					:status="filterStatus"
 					:priority="filterPriority"
 					:risk="filterRisk"
+					:type="filterType"
+					:deadline="filterDeadline"
 					:risk-first="riskFirst"
 					:users="memberUsers"
 					:tags="projectTags"
@@ -308,6 +324,8 @@ useOnTaskChange({ reload: () => handleReload() });
 					@update:status="(value) => (filterStatus = value)"
 					@update:priority="(value) => (filterPriority = value)"
 					@update:risk="(value) => (filterRisk = value)"
+					@update:type="(value) => (filterType = value)"
+					@update:deadline="(value) => (filterDeadline = value)"
 					@update:risk-first="(value) => (riskFirst = value)"
 				/>
 				<project-board
@@ -339,6 +357,8 @@ useOnTaskChange({ reload: () => handleReload() });
 					</template>
 					<template #priority="{ row }">{{ priorityLabel(row.priority) }}</template>
 					<template #risk="{ row }"><task-risk-tag :task="row" /></template>
+					<template #deadlineAt="{ row }">{{ formatDate(row.deadlineAt) || "—" }}</template>
+					<template #createdAt="{ row }">{{ formatDate(row.createdAt) }}</template>
 					<template #assignee="{ row }">
 						<base-user-name :user="row.assignee" />
 					</template>
@@ -352,7 +372,8 @@ useOnTaskChange({ reload: () => handleReload() });
 				:label="translate('project.analytics')"
 				name="analytics"
 			>
-				<project-analytics :project-id="projectId" />
+				<!-- Создаётся при каждом открытии вкладки: аналитика всегда по свежим данным -->
+				<project-analytics v-if="activeTab === 'analytics'" :project-id="projectId" />
 			</el-tab-pane>
 		</el-tabs>
 	</base-page>

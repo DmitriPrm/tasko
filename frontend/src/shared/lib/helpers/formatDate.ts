@@ -37,3 +37,16 @@ export function isTaskOverdue(task: { deadlineAt?: string | null; status: string
 	if (task.isCompleted || task.status === "DONE" || task.status === "CANCELLED") return false;
 	return isOverdue(task.deadlineAt);
 }
+
+export type DeadlineFilter = "" | "today" | "week" | "none";
+export const DEADLINE_FILTERS: Exclude<DeadlineFilter, "">[] = ["today", "week", "none"];
+
+/** Фильтр по сроку: сегодня, ближайшие 7 дней (включая сегодня) или без срока */
+export function matchesDeadline(task: { deadlineAt?: string | null }, filter: DeadlineFilter, now = dayjs()) {
+	if (!filter) return true;
+	if (filter === "none") return !task.deadlineAt;
+	if (!task.deadlineAt) return false;
+	const deadline = dayjs(task.deadlineAt);
+	if (filter === "today") return deadline.isSame(now, "day");
+	return !deadline.isBefore(now, "day") && !deadline.isAfter(now.add(7, "day"), "day");
+}

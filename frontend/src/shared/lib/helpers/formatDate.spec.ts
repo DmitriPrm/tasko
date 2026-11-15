@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { describe, expect, it } from "vitest";
 
-import { isOverdue, isTaskOverdue, toIsoDate } from "./formatDate";
+import { isOverdue, isTaskOverdue, matchesDeadline, toIsoDate } from "./formatDate";
 
 const yesterday = dayjs().subtract(1, "day").toISOString();
 const tomorrow = dayjs().add(1, "day").toISOString();
@@ -45,5 +45,27 @@ describe("toIsoDate", () => {
 
 	it("returns null for an empty value", () => {
 		expect(toIsoDate("")).toBeNull();
+	});
+});
+
+describe("matchesDeadline", () => {
+	const now = dayjs("2026-11-16T12:00:00");
+	const on = (date: string) => ({ deadlineAt: dayjs(date).toISOString() });
+
+	it("keeps everything without a filter", () => {
+		expect(matchesDeadline({ deadlineAt: null }, "", now)).toBe(true);
+	});
+
+	it("finds tasks due today and in the next 7 days", () => {
+		expect(matchesDeadline(on("2026-11-16"), "today", now)).toBe(true);
+		expect(matchesDeadline(on("2026-11-17"), "today", now)).toBe(false);
+		expect(matchesDeadline(on("2026-11-23"), "week", now)).toBe(true);
+		expect(matchesDeadline(on("2026-11-24"), "week", now)).toBe(false);
+		expect(matchesDeadline(on("2026-11-15"), "week", now)).toBe(false);
+	});
+
+	it("finds tasks without a deadline", () => {
+		expect(matchesDeadline({ deadlineAt: null }, "none", now)).toBe(true);
+		expect(matchesDeadline(on("2026-11-16"), "none", now)).toBe(false);
 	});
 });

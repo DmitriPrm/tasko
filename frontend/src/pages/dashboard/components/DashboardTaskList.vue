@@ -5,12 +5,15 @@ import type { Task } from "@/shared/api/v0/schemas";
 import { priorityLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
+import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import { useTaskDrawerStore } from "@/store/taskDrawer";
 
 interface Props {
 	title: string;
 	tasks: Task[];
 	deadlines?: boolean;
+	/** Показывать риск срыва срока */
+	risk?: boolean;
 }
 
 defineProps<Props>();
@@ -32,7 +35,8 @@ const handleOpen = (taskId: string) => {
 			<base-flex align="center" justify="space-between" :gap="4">
 				<span class="dashboard-task-list__title">{{ task.title }}</span>
 				<base-flex class="dashboard-task-list__meta" align="center" :gap="4">
-					<span v-if="!deadlines">{{ priorityLabel(task.priority) }}</span>
+					<task-risk-tag v-if="risk" :task="task" />
+					<span v-else-if="!deadlines">{{ priorityLabel(task.priority) }}</span>
 					<span v-if="deadlines && task.plannedStartAt">{{ formatListDate(task.plannedStartAt) }}</span>
 					<span v-if="task.deadlineAt">{{ formatListDate(task.deadlineAt) }}</span>
 				</base-flex>

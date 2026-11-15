@@ -2,11 +2,13 @@
 import { computed } from "vue";
 
 import { baseApi } from "@/shared/api/baseApi";
+import type { WorkloadItem } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
-import { statusLabel } from "@/shared/lib/helpers/labels";
+import { STATUS_RANK, statusLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import ProjectRiskAnalytics from "@/pages/project/components/ProjectRiskAnalytics.vue";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
+import BaseBarChart from "@/shared/ui/chart/BaseBarChart.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 
@@ -35,35 +37,59 @@ const cards = computed(() => [
 		label: translate("analytics.onTime"),
 		value: `${Math.round((overview.value?.onTimeRate ?? 0) * 100)}%`,
 	},
+	{ key: "avg", label: translate("analytics.avgDuration"), value: hours(overview.value?.averageDurationHours) },
+	{ key: "median", label: translate("analytics.medianDuration"), value: hours(overview.value?.medianDurationHours) },
 ]);
+
+/** Фактическая длительность: 0 значит «ещё нет закрытых задач с началом работы» */
+function hours(value?: number) {
+	return value ? `${Math.round(value)} ${translate("forecast.hours")}` : "—";
+}
+
+const statusItems = computed(() =>
+	Object.entries(overview.value?.byStatus ?? {})
+		.sort(([a], [b]) => (STATUS_RANK[a] ?? 0) - (STATUS_RANK[b] ?? 0))
+		.map(([status, count]) => ({ key: status, label: statusLabel(status), value: Number(count) })),
+);
+
+const workloadItems = computed(() =>
+	((workload.value ?? []) as WorkloadItem[]).map((item) => ({
+		key: item.userId,
+		label: item.fullName,
+		value: item.activeTasks,
+	})),
+);
 
 const workloadColumns = computed(() => [
 	{ key: "fullName", label: translate("users.fullName") },
 	{ key: "activeTasks", label: translate("project.tasks") },
+	{ key: "forecastHours", label: translate("analytics.forecastHours") },
 ]);
 </script>
 
 <template>
 	<section class="project-analytics">
 		<h3>{{ translate("project.analytics") }}</h3>
-		<base-flex :gap="4" wrap="wrap">
+		<div class="project-analytics__cards">
 			<base-card v-for="card in cards" :key="card.key" class="project-analytics__card">
 				<span>{{ card.label }}</span>
 				<strong>{{ card.value }}</strong>
 			</base-card>
-		</base-flex>
+		</div>
 		<h4>{{ translate("analytics.byStatus") }}</h4>
-		<base-flex :gap="3" wrap="wrap">
-			<el-tag v-for="(count, status) in overview?.byStatus || {}" :key="status">
-				{{ statusLabel(String(status)) }}: {{ count }}
-			</el-tag>
-		</base-flex>
+		<base-bar-chart :items="statusItems" :label="translate('analytics.byStatus')" />
 		<project-risk-analytics :project-id="projectId" />
 		<h4>{{ translate("analytics.workload") }}</h4>
+		<base-bar-chart
+			class="project-analytics__workload-chart"
+			:items="workloadItems"
+			:label="translate('analytics.workload')"
+		/>
 		<base-table code="project-workload" :rows="workload || []" :columns="workloadColumns" row-key="userId">
 			<template #fullName="{ row }">
 				<base-user-name :user="row" />
 			</template>
+			<template #forecastHours="{ row }">{{ hours(row.forecastHours) }}</template>
 		</base-table>
 	</section>
 </template>
@@ -82,8 +108,17 @@ const workloadColumns = computed(() => [
 		margin-top: map.get($spacers, 6);
 	}
 
+	&__workload-chart {
+		margin-bottom: map.get($spacers, 4);
+	}
+
+	&__cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		gap: map.get($spacers, 4);
+	}
+
 	&__card {
-		min-width: 160px;
 		padding: map.get($spacers, 4);
 
 		span {

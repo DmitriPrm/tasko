@@ -160,6 +160,18 @@ export class AnalyticsService {
 		});
 		const activeByUser = new Map(counts.map((item) => [item.assigneeId, item._count._all]));
 
+		// Суммарная прогнозная длительность открытых задач исполнителя (раздел 6.7 спецификации)
+		const now = new Date();
+		const openTasks = await this.prisma.task.findMany({
+			where: { projectId, assigneeId: { not: null }, status: { in: activeStatuses }, isCompleted: false },
+			include: latestPredictionInclude,
+		});
+		const forecastByUser = new Map<string, number>();
+		for (const task of openTasks) {
+			const hours = buildForecast(task, now).durationHours;
+			forecastByUser.set(task.assigneeId as string, (forecastByUser.get(task.assigneeId as string) ?? 0) + hours);
+		}
+
 		const items = await Promise.all(
 			members.map(async (member) => {
 				const activeTasks = activeByUser.get(member.userId) ?? 0;
@@ -172,6 +184,7 @@ export class AnalyticsService {
 					avatarColor: getAvatarColor(member.user.id),
 					avatarUrl: publicAvatarUrl(member.user.avatarFile, member.user.updatedAt),
 					activeTasks,
+					forecastHours: Math.round(forecastByUser.get(member.userId) ?? 0),
 				};
 			}),
 		);
