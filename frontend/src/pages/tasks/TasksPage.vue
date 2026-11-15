@@ -94,19 +94,27 @@ useOnTaskChange({ reload: () => fetch() });
 
 <template>
 	<base-page :title="translate('task.title')">
-		<base-flex class="tasks-page__toolbar" align="center" :gap="3" wrap="wrap">
-			<el-input
-				v-model="search"
-				class="tasks-page__search"
-				:placeholder="translate('task.searchByName')"
-				:prefix-icon="Search"
-				clearable
-			/>
-			<task-filter-button :filters="filters" :fields="fields" :users="users" :projects="projects" />
-			<el-switch
-				:model-value="onlyMine"
-				:active-text="translate('task.my')"
-				@update:model-value="(value: string | number | boolean) => handleOnlyMine(Boolean(value))"
+		<base-flex class="tasks-page__toolbar" align="center" justify="space-between" :gap="3" wrap="wrap">
+			<base-flex class="tasks-page__left" align="center" :gap="3" wrap="wrap">
+				<el-input
+					v-model="search"
+					class="tasks-page__search"
+					:placeholder="translate('task.searchByName')"
+					:prefix-icon="Search"
+					clearable
+				/>
+				<el-switch
+					:model-value="onlyMine"
+					:active-text="translate('task.my')"
+					@update:model-value="(value: string | number | boolean) => handleOnlyMine(Boolean(value))"
+				/>
+			</base-flex>
+			<task-filter-button
+				:filters="filters"
+				:fields="fields"
+				:users="users"
+				:projects="projects"
+				placement="bottom-end"
 			/>
 		</base-flex>
 		<task-filter-chips :filters="filters" :shown="rows.length" />
@@ -135,6 +143,11 @@ useOnTaskChange({ reload: () => fetch() });
 .tasks-page {
 	&__toolbar {
 		margin-bottom: map.get($spacers, 4);
+	}
+
+	&__left {
+		flex: 1;
+		min-width: 0;
 	}
 
 	&__search {

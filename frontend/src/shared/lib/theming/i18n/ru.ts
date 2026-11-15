@@ -197,6 +197,8 @@ export const ru = {
 		},
 	},
 	task: {
+		createSubtask: "Новая подзадача",
+		noSubtasks: "Подзадач пока нет",
 		title: "Задачи",
 		create: "Новая задача",
 		add: "Добавить задачу",

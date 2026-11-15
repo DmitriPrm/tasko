@@ -50,6 +50,18 @@ a {
 	border-radius: 6px;
 }
 
+/*
+ * У полей Element Plus фокус уже показывает внешний контейнер (синяя рамка и кольцо).
+ * Внутренний <input> не обводим, иначе появляется вторая рамка внутри поля.
+ */
+.el-input__inner:focus-visible,
+.el-select__input:focus-visible,
+.el-textarea__inner:focus-visible,
+.el-input-number input:focus-visible,
+.el-range-input:focus-visible {
+	outline: none;
+}
+
 /* Тонкие скроллбары */
 * {
 	scrollbar-width: thin;

@@ -197,6 +197,8 @@ export const en = {
 		},
 	},
 	task: {
+		createSubtask: "New subtask",
+		noSubtasks: "No subtasks yet",
 		title: "Tasks",
 		create: "New task",
 		add: "Add a task",

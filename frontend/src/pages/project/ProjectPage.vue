@@ -14,7 +14,6 @@ import ProjectEditDialog from "@/pages/projects/components/ProjectEditDialog.vue
 import TaskCreateDialog from "@/pages/project/components/TaskCreateDialog.vue";
 import { baseApi } from "@/shared/api/baseApi";
 import { openDialog } from "@/shared/lib/dialog/dialog";
-import { openConfirm } from "@/shared/lib/dialog/openConfirm";
 import type { ProjectColumn, ProjectMember, Task, User } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
@@ -215,17 +214,6 @@ const handleEditProject = async () => {
 	if (result) await handleReload();
 };
 
-const handleDeleteProject = async () => {
-	const confirmed = await openConfirm({
-		title: translate("project.deleteTitle"),
-		text: translate("project.deleteText"),
-	});
-	if (!confirmed) return;
-	await baseApi.projects.deleteProject({ id: projectId.value });
-	await favoritesStore.load();
-	await router.push({ name: "projects" });
-};
-
 const handleFavorite = async () => {
 	if (!project.value) return;
 	await favoritesStore.toggle(project.value);
@@ -269,9 +257,6 @@ useOnTaskChange({ reload: () => handleReload() });
 				<base-button v-if="canManage" @click="handleEditProject">
 					<el-icon :size="16"><edit /></el-icon>
 					{{ translate("project.edit") }}
-				</base-button>
-				<base-button v-if="canManage" type="danger" plain @click="handleDeleteProject">
-					{{ translate("project.delete") }}
 				</base-button>
 				<base-button v-if="authStore.hasPermission('TASKS_CREATE')" type="primary" @click="handleOpenCreate">
 					{{ translate("task.create") }}

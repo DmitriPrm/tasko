@@ -377,6 +377,7 @@ const findUser = (userId: string): User | undefined => memberUsers.value.find((u
 					v-if="taskId"
 					:task-id="taskId"
 					:project-id="task.projectId"
+					:task-title="task.title"
 					:can-create="Boolean(task.canEdit)"
 					@open="handleOpenTask"
 					@changed="handleRelationsChanged"

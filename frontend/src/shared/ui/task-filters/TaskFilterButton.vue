@@ -20,6 +20,8 @@ const props = defineProps<{
 	users?: User[];
 	tags?: { id: string; name: string; color?: string }[];
 	projects?: { id: string; name: string }[];
+	/** Куда раскрывать панель: у кнопки в правом углу — влево (bottom-end) */
+	placement?: "bottom-start" | "bottom-end";
 }>();
 
 const states = ["open", "closed", "all"] as const;
@@ -32,7 +34,7 @@ const update = (field: TaskFilterField, value: unknown) =>
 </script>
 
 <template>
-	<el-popover trigger="click" placement="bottom-start" :width="320" popper-class="task-filter-popover">
+	<el-popover trigger="click" :placement="placement || 'bottom-start'" :width="320" popper-class="task-filter-popover">
 		<template #reference>
 			<base-button class="task-filter-button" :class="{ 'is-active': filters.count.value }">
 				<base-flex align="center" :gap="1">

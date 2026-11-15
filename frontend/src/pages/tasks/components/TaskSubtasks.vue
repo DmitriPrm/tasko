@@ -1,12 +1,16 @@
 <script lang="ts" setup>
-import { computed, ref } from "vue";
+import { computed } from "vue";
+
+import TaskCreateDialog from "@/pages/project/components/TaskCreateDialog.vue";
 
 import { baseApi } from "@/shared/api/baseApi";
 import type { BriefTask } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
+import { openDialog } from "@/shared/lib/dialog/dialog";
+import BaseIconButton from "@/shared/ui/button/BaseIconButton.vue";
 import { statusLabel, statusTagType } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
-import { CircleCheck, CircleCheckFilled } from "@/shared/ui/icon/icons";
+import { CircleCheck, CircleCheckFilled, Plus } from "@/shared/ui/icon/icons";
 
 const emit = defineEmits<{
 	open: [taskId: string];
@@ -16,11 +20,9 @@ const emit = defineEmits<{
 const props = defineProps<{
 	taskId: string;
 	projectId: string;
+	taskTitle?: string;
 	canCreate?: boolean;
 }>();
-
-const newTitle = ref("");
-const isCreating = ref(false);
 
 const { state, fetch } = useFetch(baseApi.tasks.getSubtasks, "data", {
 	immediate: true,
@@ -31,19 +33,16 @@ const subtasks = computed(() => (state.value ?? []) as BriefTask[]);
 const isDone = (task: BriefTask) => task.status === "DONE" || task.isCompleted;
 const doneCount = computed(() => subtasks.value.filter(isDone).length);
 
-const handleCreate = async (event: KeyboardEvent) => {
-	if (event.isComposing) return;
-	const title = newTitle.value.trim();
-	if (!title || isCreating.value) return;
-	isCreating.value = true;
-	try {
-		await baseApi.tasks.createTask({ id: props.projectId }, undefined, { title, parentTaskId: props.taskId });
-		newTitle.value = "";
-		await fetch();
-		emit("changed");
-	} finally {
-		isCreating.value = false;
-	}
+/** Подзадача создаётся в том же окне, что и обычная задача; после сохранения шторка обновляется */
+const handleCreate = async () => {
+	const created = await openDialog(TaskCreateDialog, {
+		projectId: props.projectId,
+		parentTaskId: props.taskId,
+		parentTitle: props.taskTitle,
+	});
+	if (!created) return;
+	await fetch();
+	emit("changed");
 };
 </script>
 
@@ -51,7 +50,12 @@ const handleCreate = async (event: KeyboardEvent) => {
 	<section class="task-subtasks">
 		<base-flex align="center" justify="space-between">
 			<h3>{{ translate("task.subtasks") }}</h3>
-			<span v-if="subtasks.length" class="task-subtasks__progress">{{ doneCount }} / {{ subtasks.length }}</span>
+			<base-flex align="center" :gap="2">
+				<span v-if="subtasks.length" class="task-subtasks__progress">{{ doneCount }} / {{ subtasks.length }}</span>
+				<base-icon-button v-if="canCreate" :label="translate('task.addSubtask')" @click="handleCreate">
+					<el-icon :size="16"><plus /></el-icon>
+				</base-icon-button>
+			</base-flex>
 		</base-flex>
 		<ul v-if="subtasks.length" class="task-subtasks__list">
 			<li v-for="item in subtasks" :key="item.id">
@@ -72,15 +76,7 @@ const handleCreate = async (event: KeyboardEvent) => {
 				</button>
 			</li>
 		</ul>
-		<el-input
-			v-if="canCreate"
-			v-model="newTitle"
-			class="task-subtasks__add"
-			maxlength="255"
-			:disabled="isCreating"
-			:placeholder="translate('task.addSubtask')"
-			@keydown.enter.prevent="handleCreate"
-		/>
+		<p v-if="!subtasks.length" class="task-subtasks__empty">{{ translate("task.noSubtasks") }}</p>
 	</section>
 </template>
 
@@ -152,12 +148,10 @@ const handleCreate = async (event: KeyboardEvent) => {
 		}
 	}
 
-	&__add {
-		margin-top: map.get($spacers, 3);
-
-		:deep(.el-input__wrapper) {
-			box-shadow: 0 0 0 1px var(--mt-color-gray-300) inset;
-		}
+	&__empty {
+		margin: map.get($spacers, 2) 0 0;
+		color: var(--mt-color-gray-400);
+		font-size: map.get($font-sizes, 7);
 	}
 }
 </style>
