@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -15,6 +15,24 @@ export class SettingsController {
 	@Get("permissions")
 	getPermissions(@CurrentUser() user: AuthUser) {
 		return this.settingsService.getPermissions(user);
+	}
+
+	/** Системные настройки целиком — для администратора */
+	@Get("system")
+	getSystem(@CurrentUser() user: AuthUser) {
+		return this.settingsService.getSystem(user);
+	}
+
+	/** Изменить один или несколько разделов: { risk: {...}, ml: {...} } */
+	@Patch("system")
+	updateSystem(@CurrentUser() user: AuthUser, @Body() patch: Record<string, unknown>) {
+		return this.settingsService.updateSystem(user, patch);
+	}
+
+	/** То, что нужно интерфейсу любого пользователя: пороги риска, ограничения файлов, вид проекта */
+	@Get("public")
+	getPublic() {
+		return this.settingsService.getPublic();
 	}
 
 	@Put("permissions")

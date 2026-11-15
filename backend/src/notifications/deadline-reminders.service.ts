@@ -1,11 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { NotificationType, TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
-
-const DEFAULT_WINDOW_HOURS = 24;
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 
 /** Раз в час напоминает исполнителям о задачах, срок которых скоро наступит */
 @Injectable()
@@ -14,7 +12,7 @@ export class DeadlineRemindersService {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly config: ConfigService,
+		private readonly settings: SystemSettingsService,
 	) {}
 
 	@Cron(CronExpression.EVERY_HOUR)
@@ -29,7 +27,7 @@ export class DeadlineRemindersService {
 
 	/** Возвращает число созданных уведомлений */
 	async sendReminders(now = new Date()) {
-		const windowHours = Number(this.config.get("DEADLINE_REMINDER_HOURS")) || DEFAULT_WINDOW_HOURS;
+		const windowHours = this.settings.section("deadlines").reminderHours;
 		const until = new Date(now.getTime() + windowHours * 60 * 60 * 1000);
 
 		const tasks = await this.prisma.task.findMany({

@@ -1,6 +1,7 @@
 import { TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { MlClient } from "./ml-client";
 import { PredictionsService } from "./predictions.service";
 
@@ -28,11 +29,17 @@ describe("PredictionsService", () => {
 		taskPrediction: { create: jest.fn() },
 	};
 	const ml = { enabled: true, predict: jest.fn(), modelsInfo: jest.fn() };
-	const service = new PredictionsService(prisma as unknown as PrismaService, ml as unknown as MlClient);
+	const settings = { section: jest.fn().mockReturnValue({ enabled: true }) };
+	const service = new PredictionsService(
+		prisma as unknown as PrismaService,
+		ml as unknown as MlClient,
+		settings as unknown as SystemSettingsService,
+	);
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		ml.enabled = true;
+		settings.section.mockReturnValue({ enabled: true });
 		prisma.task.findUnique.mockResolvedValue(task);
 		prisma.task.findMany.mockResolvedValue([]);
 		prisma.taskPrediction.create.mockImplementation(async ({ data }) => ({ id: "pred", ...data }));
@@ -40,6 +47,12 @@ describe("PredictionsService", () => {
 
 	it("does nothing when the ML service is not configured", async () => {
 		ml.enabled = false;
+		await expect(service.refresh("t1", "CREATED")).resolves.toBeNull();
+		expect(prisma.task.findUnique).not.toHaveBeenCalled();
+	});
+
+	it("falls back to rules when the administrator switched ML off", async () => {
+		settings.section.mockReturnValue({ enabled: false });
 		await expect(service.refresh("t1", "CREATED")).resolves.toBeNull();
 		expect(prisma.task.findUnique).not.toHaveBeenCalled();
 	});

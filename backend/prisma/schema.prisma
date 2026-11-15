@@ -511,3 +511,13 @@ model ProjectInvitation {
   @@index([email, status])
   @@map("project_invitations")
 }
+
+/// Системные настройки, которые администратор меняет в интерфейсе. Строка на раздел (risk, ml, …)
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

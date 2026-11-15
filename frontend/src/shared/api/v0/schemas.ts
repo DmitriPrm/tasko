@@ -382,6 +382,53 @@ export const ZDashboard = z.object({
 	riskyTasks: z.array(ZTask).default([]),
 });
 
+export const ZSystemSettings = z.object({
+	risk: z.object({
+		mediumThreshold: z.number(),
+		highThreshold: z.number(),
+		alertsEnabled: z.boolean(),
+		alertManagers: z.boolean(),
+	}),
+	deadlines: z.object({ reminderHours: z.number() }),
+	ml: z.object({ enabled: z.boolean() }),
+	registration: z.object({
+		open: z.boolean(),
+		allowedDomains: z.array(z.string()),
+		defaultRole: z.enum(["EXECUTOR", "MANAGER"]),
+	}),
+	attachments: z.object({ maxSizeMb: z.number(), allowedTypes: z.array(z.string()) }),
+	projects: z.object({ defaultView: z.enum(["board", "list"]), strictWorkflow: z.boolean() }),
+});
+
+export const ZPublicSettings = z.object({
+	risk: z.object({ mediumThreshold: z.number(), highThreshold: z.number() }),
+	attachments: z.object({ maxSizeMb: z.number(), allowedTypes: z.array(z.string()) }),
+	projects: z.object({ defaultView: z.enum(["board", "list"]), strictWorkflow: z.boolean() }),
+	registration: z.object({ open: z.boolean(), allowedDomains: z.array(z.string()) }),
+});
+
+const ZMlModel = z.object({
+	version: z.string(),
+	algorithm: z.string(),
+	trainedAt: z.string().nullable().optional(),
+	sampleSize: z.number().nullable().optional(),
+	dataSource: z.string().nullable().optional(),
+	metrics: z.record(z.string(), z.number()).nullable().optional(),
+});
+
+export const ZMlModels = z.object({ duration: ZMlModel.nullable(), risk: ZMlModel.nullable() });
+
+export const ZMlStatus = z.object({
+	configured: z.boolean().optional(),
+	switchedOn: z.boolean().optional(),
+	enabled: z.boolean(),
+	available: z.boolean(),
+	models: ZMlModels.nullable(),
+});
+
+export const ZMlReload = z.object({ reloaded: z.boolean(), models: ZMlModels.nullable() });
+export const ZMlRecompute = z.object({ total: z.number(), refreshed: z.number() });
+
 export const ZTableLayout = z.object({
 	code: z.string(),
 	widths: z.record(z.string(), z.number()),
@@ -411,6 +458,9 @@ export type Project = z.infer<typeof ZProject>;
 export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
+export type SystemSettings = z.infer<typeof ZSystemSettings>;
+export type PublicSettings = z.infer<typeof ZPublicSettings>;
+export type MlStatus = z.infer<typeof ZMlStatus>;
 export type WorkloadItem = z.infer<typeof ZWorkloadItem>;
 export type RiskAnalytics = z.infer<typeof ZRiskAnalytics>;
 export type TaskForecast = z.infer<typeof ZTaskForecast>;

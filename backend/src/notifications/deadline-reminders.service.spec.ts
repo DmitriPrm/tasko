@@ -1,7 +1,7 @@
-import { ConfigService } from "@nestjs/config";
 import { NotificationType, TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { DeadlineRemindersService } from "./deadline-reminders.service";
 
 describe("DeadlineRemindersService", () => {
@@ -9,11 +9,17 @@ describe("DeadlineRemindersService", () => {
 		task: { findMany: jest.fn() },
 		notification: { createMany: jest.fn() },
 	};
-	const config = { get: jest.fn() };
-	const service = new DeadlineRemindersService(prisma as unknown as PrismaService, config as unknown as ConfigService);
+	const settings = { section: jest.fn() };
+	const service = new DeadlineRemindersService(
+		prisma as unknown as PrismaService,
+		settings as unknown as SystemSettingsService,
+	);
 	const now = new Date("2026-11-10T09:00:00Z");
 
-	beforeEach(() => jest.clearAllMocks());
+	beforeEach(() => {
+		jest.clearAllMocks();
+		settings.section.mockReturnValue({ reminderHours: 24 });
+	});
 
 	it("looks only at open tasks due within the window", async () => {
 		prisma.task.findMany.mockResolvedValue([]);
@@ -57,8 +63,8 @@ describe("DeadlineRemindersService", () => {
 		expect(prisma.notification.createMany).not.toHaveBeenCalled();
 	});
 
-	it("respects a custom window from the environment", async () => {
-		config.get.mockReturnValue("48");
+	it("respects the reminder window from the system settings", async () => {
+		settings.section.mockReturnValue({ reminderHours: 48 });
 		prisma.task.findMany.mockResolvedValue([]);
 
 		await service.sendReminders(now);

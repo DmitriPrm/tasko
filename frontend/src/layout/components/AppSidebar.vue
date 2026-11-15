@@ -3,7 +3,6 @@ import { CircleCheck, Close, Expand, Fold, Folder, Grid, PieChart, Setting, Star
 import { computed, onMounted, watch, type Component } from "vue";
 import { useRoute } from "vue-router";
 
-import { SETTINGS_CATEGORIES } from "@/pages/settings/settingsCategories";
 import BaseLogo from "@/shared/ui/logo/BaseLogo.vue";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import { useAuthStore } from "@/store/auth";
@@ -29,9 +28,8 @@ const items = computed(() => {
 		list.push({ name: "analytics", label: translate("nav.analytics"), icon: PieChart });
 	}
 
-	if (authStore.hasPermission("SETTINGS_GENERAL") || authStore.hasPermission("SETTINGS_PERMISSIONS")) {
-		list.push({ name: "settings", label: translate("nav.settings"), icon: Setting });
-	}
+	// В настройках есть личные разделы, поэтому пункт виден всем
+	list.push({ name: "settings", label: translate("nav.settings"), icon: Setting });
 
 	if (authStore.hasPermission("USERS_VIEW")) {
 		list.push({ name: "users", label: translate("nav.users"), icon: User });
@@ -55,7 +53,7 @@ const isItemActive = (name: string) => {
 	if (name === "projects") return route.name === "projects" || route.name === "project";
 	if (name === "tasks") return route.name === "tasks";
 	if (name === "settings") {
-		return route.name === "settings" || SETTINGS_CATEGORIES.some((item) => item.routeName === route.name);
+		return route.name === "settings";
 	}
 	return route.name === name;
 };

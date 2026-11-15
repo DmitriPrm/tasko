@@ -1,6 +1,7 @@
 import { TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { RiskAlertsService } from "./risk-alerts.service";
 
 describe("RiskAlertsService", () => {
@@ -23,9 +24,16 @@ describe("RiskAlertsService", () => {
 		task: { findMany: jest.fn() },
 		notification: { createMany: jest.fn() },
 	};
-	const service = new RiskAlertsService(prisma as unknown as PrismaService);
+	const settings = { section: jest.fn() };
+	const service = new RiskAlertsService(
+		prisma as unknown as PrismaService,
+		settings as unknown as SystemSettingsService,
+	);
 
-	beforeEach(() => jest.clearAllMocks());
+	beforeEach(() => {
+		jest.clearAllMocks();
+		settings.section.mockReturnValue({ alertsEnabled: true, alertManagers: true });
+	});
 
 	it("notifies the assignee, co-assignees and managers about a high risk", async () => {
 		// Срок прошёл, задача открыта — правила дают высокий риск
@@ -55,6 +63,16 @@ describe("RiskAlertsService", () => {
 		prisma.task.findMany.mockResolvedValue([
 			{ ...base, priority: "LOW", status: TaskStatus.IN_PROGRESS, deadlineAt: new Date("2026-12-20T00:00:00Z") },
 		]);
+		await expect(service.notify({}, now)).resolves.toBe(0);
+	});
+
+	it("skips managers or everything when the administrator turned it off", async () => {
+		prisma.task.findMany.mockResolvedValue([{ ...base, deadlineAt: new Date("2026-11-05T00:00:00Z") }]);
+
+		settings.section.mockReturnValue({ alertsEnabled: true, alertManagers: false });
+		await expect(service.notify({}, now)).resolves.toBe(2);
+
+		settings.section.mockReturnValue({ alertsEnabled: false, alertManagers: true });
 		await expect(service.notify({}, now)).resolves.toBe(0);
 	});
 });

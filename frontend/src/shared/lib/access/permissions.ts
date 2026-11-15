@@ -23,13 +23,20 @@ export const PERMISSIONS = [
 	{ code: "COMMENTS_CREATE", group: "communication" },
 	{ code: "ANALYTICS_VIEW", group: "communication" },
 	{ code: "NOTIFICATIONS_VIEW", group: "communication" },
-	{ code: "SETTINGS_GENERAL", group: "settings" },
+	{ code: "SETTINGS_SYSTEM", group: "settings" },
 	{ code: "SETTINGS_PERMISSIONS", group: "settings" },
 ] as const;
 
 const ALL = PERMISSIONS.map((item) => item.code);
 
-const ADMIN_ONLY = ["PROFILE_EDIT_RIGHTS", "USERS_VIEW", "USERS_CREATE", "USERS_BLOCK", "SETTINGS_PERMISSIONS"];
+const ADMIN_ONLY = [
+	"PROFILE_EDIT_RIGHTS",
+	"USERS_VIEW",
+	"USERS_CREATE",
+	"USERS_BLOCK",
+	"SETTINGS_PERMISSIONS",
+	"SETTINGS_SYSTEM",
+];
 
 const EXECUTOR = [
 	"PROFILE_VIEW",
@@ -48,7 +55,6 @@ const EXECUTOR = [
 	"COMMENTS_CREATE",
 	"ANALYTICS_VIEW",
 	"NOTIFICATIONS_VIEW",
-	"SETTINGS_GENERAL",
 ];
 
 export const ROLE_DEFAULTS: Record<"ADMIN" | "MANAGER" | "EXECUTOR", string[]> = {

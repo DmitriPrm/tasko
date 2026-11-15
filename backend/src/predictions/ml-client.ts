@@ -61,6 +61,11 @@ export class MlClient {
 		return this.request<MlModelsInfo>("/models/info");
 	}
 
+	/** Подхватить модели, обученные после запуска сервиса */
+	reloadModels() {
+		return this.request<MlModelsInfo>("/models/reload", { method: "POST" });
+	}
+
 	private async request<T>(path: string, init: RequestInit = {}): Promise<T | null> {
 		if (!this.enabled) return null;
 		try {

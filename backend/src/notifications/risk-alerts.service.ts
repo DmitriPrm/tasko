@@ -4,6 +4,7 @@ import { NotificationType, Prisma, ProjectRole, TaskStatus } from "@prisma/clien
 
 import { latestPredictionInclude } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { buildForecast } from "../tasks/forecast";
 
 /**
@@ -15,7 +16,10 @@ import { buildForecast } from "../tasks/forecast";
 export class RiskAlertsService {
 	private readonly logger = new Logger(RiskAlertsService.name);
 
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly settings: SystemSettingsService,
+	) {}
 
 	@Cron(CronExpression.EVERY_HOUR)
 	async handleCron() {
@@ -39,6 +43,8 @@ export class RiskAlertsService {
 
 	/** Возвращает число созданных уведомлений */
 	async notify(where: Prisma.TaskWhereInput = {}, now = new Date()) {
+		const { alertsEnabled, alertManagers } = this.settings.section("risk");
+		if (!alertsEnabled) return 0;
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				...where,
@@ -62,7 +68,7 @@ export class RiskAlertsService {
 				[
 					task.assigneeId,
 					...task.coAssignees.map((item) => item.userId),
-					...task.project.members.map((m) => m.userId),
+					...(alertManagers ? task.project.members.map((m) => m.userId) : []),
 				].filter((id): id is string => Boolean(id)),
 			);
 			const notified = new Set(task.notifications.map((item) => item.userId));

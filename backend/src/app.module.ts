@@ -20,6 +20,7 @@ import { PredictionsModule } from "./predictions/predictions.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { SettingsModule } from "./settings/settings.module";
+import { SystemSettingsModule } from "./system-settings/system-settings.module";
 import { TableLayoutsModule } from "./table-layouts/table-layouts.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { UsersModule } from "./users/users.module";
@@ -30,6 +31,7 @@ import { UsersModule } from "./users/users.module";
 		ScheduleModule.forRoot(),
 		ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
 		PrismaModule,
+		SystemSettingsModule,
 		MailModule,
 		AccessModule,
 		AuthModule,

@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { DependencyType, ModelKind, Prisma, PredictionTrigger, TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { MlClient, MlModelInfo, MlModelsInfo } from "./ml-client";
 import { buildPredictionInput, HistoryTask } from "./prediction-input";
 
@@ -60,10 +61,12 @@ export class PredictionsService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly ml: MlClient,
+		private readonly settings: SystemSettingsService,
 	) {}
 
+	/** Прогноз через ML: сервис настроен в .env и не выключен администратором */
 	get enabled() {
-		return this.ml.enabled;
+		return this.ml.enabled && this.settings.section("ml").enabled;
 	}
 
 	/**
@@ -71,7 +74,7 @@ export class PredictionsService {
 	 * сервис выключен/недоступен или задача уже закрыта. Никогда не бросает исключение.
 	 */
 	async refresh(taskId: string, trigger: PredictionTrigger): Promise<StoredPrediction | null> {
-		if (!this.ml.enabled) return null;
+		if (!this.enabled) return null;
 		try {
 			return await this.compute(taskId, trigger);
 		} catch (error) {
@@ -81,9 +84,32 @@ export class PredictionsService {
 	}
 
 	async status() {
-		if (!this.ml.enabled) return { enabled: false, available: false, models: null };
+		const configured = this.ml.enabled;
+		const switchedOn = this.settings.section("ml").enabled;
+		if (!configured) return { configured, switchedOn, enabled: false, available: false, models: null };
 		const models = await this.ml.modelsInfo();
-		return { enabled: true, available: models !== null, models };
+		return { configured, switchedOn, enabled: switchedOn, available: models !== null, models };
+	}
+
+	/** Попросить сервис перечитать модели с диска (после переобучения) */
+	async reloadModels() {
+		if (!this.ml.enabled) return { reloaded: false, models: null };
+		const models = await this.ml.reloadModels();
+		return { reloaded: models !== null, models };
+	}
+
+	/** Пересчитать прогнозы всех открытых задач — например, после переобучения моделей */
+	async recomputeAll() {
+		if (!this.enabled) return { total: 0, refreshed: 0 };
+		const tasks = await this.prisma.task.findMany({
+			where: { isCompleted: false, status: { notIn: FINISHED } },
+			select: { id: true },
+		});
+		let refreshed = 0;
+		for (const task of tasks) {
+			if (await this.refresh(task.id, PredictionTrigger.MANUAL)) refreshed += 1;
+		}
+		return { total: tasks.length, refreshed };
 	}
 
 	history(taskId: string, take = 20) {

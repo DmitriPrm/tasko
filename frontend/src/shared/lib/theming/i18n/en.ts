@@ -82,6 +82,7 @@ export const en = {
 		en: "English",
 	},
 	theme: {
+		system: "System",
 		light: "Light",
 		dark: "Dark",
 	},
@@ -441,6 +442,69 @@ export const en = {
 		},
 	},
 	settings: {
+		saved: "Settings saved",
+		appearanceHint: "Language and theme are saved in this browser and apply immediately.",
+		groups: {
+			personal: "Personal",
+			system: "System",
+		},
+		sections: {
+			appearance: {
+				title: "Appearance",
+				description: "Interface language and color theme.",
+			},
+			rights: {
+				title: "Roles and permissions",
+				description: "What administrators, managers and executors can do.",
+			},
+			risks: {
+				title: "Deadlines and risks",
+				description: "Deadline risk levels, reminders and alerts.",
+			},
+			ml: {
+				title: "Forecasting (ML)",
+				description: "Forecast service, active models and their metrics.",
+			},
+		},
+		risks: {
+			levelsTitle: "Risk levels",
+			levelsHint:
+				"The probability of missing a deadline is split into three levels. They drive board colors, filters, analytics and alerts.",
+			medium: "Medium risk from",
+			high: "High risk from",
+			orderError: "The high risk threshold must be above the medium one",
+			notifyTitle: "Reminders and alerts",
+			reminderHours: "Remind about a deadline",
+			alertsEnabled: "Alert about a high risk of missing a deadline",
+			alertManagers: "Also alert project managers",
+		},
+		ml: {
+			serviceTitle: "Forecast service",
+			serviceHint: "When ML is off or unavailable, tasks work as usual and the risk is estimated with simple rules.",
+			enabled: "Use ML",
+			check: "Check",
+			reload: "Reload models",
+			recompute: "Recalculate forecasts",
+			recomputeText: "Forecasts will be recalculated for all open tasks. This may take a while.",
+			recomputed: "Forecasts recalculated",
+			reloaded: "Models reloaded",
+			notConfigured: "The forecast service is not connected: ML_SERVICE_URL is empty in the backend .env",
+			switchedOff: "ML is off — forecasts use rules",
+			unavailable: "The forecast service does not respond — forecasts use rules",
+			noModels: "The service works but there are no trained models",
+			working: "The service works and the models are loaded",
+			kind: {
+				duration: "Duration model",
+				risk: "Deadline risk model",
+			},
+			synthetic: "Trained on synthetic data",
+			algorithm: "Algorithm",
+			version: "Version",
+			trainedAt: "Trained",
+			sampleSize: "Sample size",
+			trainHint:
+				"Training runs in the ml folder: python -m tasko_ml.train --source db. After training click Reload models and Recalculate forecasts.",
+		},
 		title: "Settings",
 		noResults: "Nothing found",
 		language: "Interface language",
@@ -511,7 +575,7 @@ export const en = {
 		COMMENTS_CREATE: "Write comments",
 		ANALYTICS_VIEW: "View analytics",
 		NOTIFICATIONS_VIEW: "View notifications",
-		SETTINGS_GENERAL: "Open general settings",
+		SETTINGS_SYSTEM: "Change system settings",
 		SETTINGS_PERMISSIONS: "Configure role permissions",
 	},
 	profile: {
