@@ -114,6 +114,7 @@ export const Memo = createIcon("Memo", [
 	p("M9 13h6"),
 	p("M9 17h4"),
 ]);
+export const InfoFilled = createIcon("InfoFilled", [c(12, 12, 9), p("M12 11v5"), p("M12 8h.01")]);
 export const Warning = createIcon("Warning", [
 	p("M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"),
 	p("M12 9v4"),

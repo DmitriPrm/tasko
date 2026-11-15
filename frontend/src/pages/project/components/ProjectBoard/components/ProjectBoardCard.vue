@@ -5,6 +5,14 @@ import { computed, ref } from "vue";
 
 import type { ProjectMember, Task } from "@/shared/api/v0/schemas";
 import { DATE_FIELD_FORMAT, formatDate, isTaskOverdue, toIsoDate } from "@/shared/lib/helpers/formatDate";
+import {
+	durationText,
+	factorLabel,
+	percent,
+	riskImpact,
+	ruleFactorLabels,
+	visibleRiskFactors,
+} from "@/shared/lib/helpers/forecast";
 import { priorityLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
@@ -30,11 +38,23 @@ const memberUsers = computed(() => (props.members || []).map((member) => member.
 const deadlineValue = computed(() => (props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : ""));
 
 /** Значок риска — только для открытых задач с высоким риском срыва срока */
-const highRisk = computed(() => {
+const riskForecast = computed(() => {
 	const forecast = props.task.forecast;
 	if (!forecast || forecast.riskLevel !== "HIGH" || props.task.isCompleted) return null;
 	if (props.task.status === "DONE" || props.task.status === "CANCELLED") return null;
-	return Math.round(forecast.riskProbability * 100);
+	return forecast;
+});
+
+/** Почему риск высокий: факторы модели (до трёх) или причины по правилам */
+const riskReasons = computed(() => {
+	const forecast = riskForecast.value;
+	if (!forecast) return [];
+	const rules = ruleFactorLabels(forecast).map((label) => ({ label, impact: "" }));
+	if (forecast.source !== "ML") return rules;
+	const model = visibleRiskFactors(forecast)
+		.slice(0, 3)
+		.map((factor) => ({ label: factorLabel(factor), impact: riskImpact(factor) }));
+	return [...rules, ...model];
 });
 
 const handleOpen = () => emit("open", props.task.id);
@@ -89,14 +109,33 @@ const handleDeadline = (value: string | "") => {
 						<el-icon :size="12" aria-hidden="true"><lock /></el-icon>
 						{{ task.openBlockersCount }}
 					</span>
-					<span
-						v-if="highRisk !== null"
-						class="project-board-card__badge project-board-card__badge--risk"
-						:title="translate('forecast.highRiskBadge')"
-					>
-						<el-icon :size="12" aria-hidden="true"><warning /></el-icon>
-						{{ highRisk }}%
-					</span>
+					<el-tooltip v-if="riskForecast" placement="top" :show-after="150" popper-class="risk-tooltip">
+						<span
+							class="project-board-card__badge project-board-card__badge--risk"
+							tabindex="0"
+							:aria-label="`${translate('forecast.highRiskBadge')}: ${percent(riskForecast.riskProbability)}`"
+						>
+							<el-icon :size="12" aria-hidden="true"><warning /></el-icon>
+							{{ percent(riskForecast.riskProbability) }}
+						</span>
+						<template #content>
+							<div class="risk-tooltip__body">
+								<strong>
+									{{ translate("forecast.highRiskBadge") }} · {{ percent(riskForecast.riskProbability) }}
+								</strong>
+								<span>{{ translate("forecast.duration") }}: {{ durationText(riskForecast) }}</span>
+								<ul v-if="riskReasons.length">
+									<li v-for="reason in riskReasons" :key="reason.label">
+										<span>{{ reason.label }}</span>
+										<span v-if="reason.impact" class="risk-tooltip__impact">{{ reason.impact }}</span>
+									</li>
+								</ul>
+								<span class="risk-tooltip__source">
+									{{ translate(riskForecast.source === "ML" ? "forecast.sourceMl" : "forecast.sourceRules") }}
+								</span>
+							</div>
+						</template>
+					</el-tooltip>
 					<span v-if="task.subtasksCount" class="project-board-card__badge" :title="translate('task.subtasks')">
 						<el-icon :size="12" aria-hidden="true"><list /></el-icon>
 						{{ task.subtasksCount }}
@@ -156,6 +195,44 @@ const handleDeadline = (value: string | "") => {
 <style scoped lang="scss">
 @use "sass:map";
 @use "@/assets/styles/maps" as *;
+
+/* Подсказка рендерится в body, поэтому стили глобальные */
+:global(.risk-tooltip) {
+	max-width: 280px;
+}
+
+:global(.risk-tooltip__body) {
+	display: flex;
+	flex-direction: column;
+	gap: map.get($spacers, 1);
+	font-size: map.get($font-sizes, 8);
+	line-height: 1.4;
+}
+
+:global(.risk-tooltip__body ul) {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: map.get($spacers, 1) 0;
+	padding: 0;
+	list-style: none;
+}
+
+:global(.risk-tooltip__body li) {
+	display: flex;
+	justify-content: space-between;
+	gap: map.get($spacers, 3);
+}
+
+:global(.risk-tooltip__impact) {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+:global(.risk-tooltip__source) {
+	opacity: 0.7;
+}
 
 .project-board-card {
 	margin-bottom: map.get($spacers, 2);

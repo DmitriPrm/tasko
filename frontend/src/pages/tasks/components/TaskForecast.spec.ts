@@ -81,8 +81,10 @@ describe("TaskForecast", () => {
 	it("keeps the previous forecast when the service is unavailable", async () => {
 		refresh.mockResolvedValue({ data: { data: { forecast: base, mlEnabled: true, refreshed: false, history: [] } } });
 		const wrapper = mountForecast(base);
-		await wrapper.find("button").trigger("click");
+		const button = wrapper.findAll("button").find((item) => item.text().includes("Пересчитать"));
+		await button?.trigger("click");
 		await vi.waitFor(() => expect(refresh).toHaveBeenCalledWith({ id: "t1" }));
+		expect(button).toBeDefined();
 		expect(wrapper.emitted("refreshed")).toBeUndefined();
 	});
 });

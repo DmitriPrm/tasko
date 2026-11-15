@@ -4,10 +4,21 @@ import { computed, ref, watch } from "vue";
 
 import { baseApi } from "@/shared/api/baseApi";
 import type { TaskForecast } from "@/shared/api/v0/schemas";
+import {
+	durationImpact,
+	durationText,
+	factorLabel,
+	impactTitle,
+	percent,
+	riskImpact,
+	riskLevelLabel,
+	riskTagType,
+	visibleDurationFactors,
+	visibleRiskFactors,
+} from "@/shared/lib/helpers/forecast";
 import { formatDateTime } from "@/shared/lib/helpers/formatDate";
-import { i18n, translate } from "@/shared/lib/theming/i18n/translate";
-
-type Factor = TaskForecast["riskFactors"][number];
+import { translate } from "@/shared/lib/theming/i18n/translate";
+import BaseTooltip from "@/shared/ui/tooltip/BaseTooltip.vue";
 
 const emit = defineEmits<{
 	refreshed: [];
@@ -28,42 +39,12 @@ watch(
 	},
 );
 
-const riskTagType = { LOW: "success", MEDIUM: "warning", HIGH: "danger" } as const;
-const riskLabel = computed(() => (current.value ? translate(`forecast.${current.value.riskLevel.toLowerCase()}`) : ""));
-const percent = (value: number) => `${Math.round(value * 100)}%`;
-
-const durationText = computed(() => {
-	if (!current.value) return "";
-	const hours = current.value.durationHours ?? current.value.durationDays * 24;
-	const h = translate("forecast.hours");
-	if (hours < 24) return `≈ ${Math.max(1, Math.round(hours))} ${h}`;
-	return `≈ ${Math.round(hours / 24)} ${translate("forecast.days")} (${Math.round(hours)} ${h})`;
-});
-
+const riskLabel = computed(() => (current.value ? riskLevelLabel(current.value) : ""));
+const duration = computed(() => (current.value ? durationText(current.value) : ""));
 const isMl = computed(() => current.value?.source === "ML");
 const modelVersion = computed(() => current.value?.models?.risk || current.value?.models?.duration || "");
-
-/** Признаки «да/нет»: при значении 0 пишем «Нет исполнителя», а не «Есть исполнитель» */
-const NEGATED = new Set(["has_deadline", "has_planned_start", "has_assignee", "is_subtask"]);
-
-/** Подпись признака: перевод по ключу, иначе подпись от ML-сервиса */
-const factorLabel = (factor: Factor) => {
-	const negated = NEGATED.has(factor.feature) && factor.value === 0;
-	const key = `forecast.${negated ? "featureNot" : "feature"}.${factor.feature}`;
-	const label = i18n.global.te(key) ? translate(key) : factor.label;
-	return factor.value === null ? `${label} (${translate("forecast.noData")})` : label;
-};
-
-// Вклады меньше 0,5 п.п. риска или получаса работы — шум: не показываем
-const riskFactors = computed(() => (current.value?.riskFactors ?? []).filter((item) => Math.abs(item.impact) >= 0.005));
-const durationFactors = computed(() =>
-	(current.value?.durationFactors ?? []).filter((item) => Math.abs(item.impact) >= 0.5),
-);
-
-const riskImpact = (factor: Factor) => `${factor.impact > 0 ? "+" : "−"}${Math.abs(Math.round(factor.impact * 100))}%`;
-const durationImpact = (factor: Factor) =>
-	`${factor.impact > 0 ? "+" : "−"}${Math.abs(Math.round(factor.impact))} ${translate("forecast.hours")}`;
-const impactTitle = (factor: Factor) => translate(factor.impact > 0 ? "forecast.raises" : "forecast.lowers");
+const riskFactors = computed(() => (current.value ? visibleRiskFactors(current.value) : []));
+const durationFactors = computed(() => (current.value ? visibleDurationFactors(current.value) : []));
 
 const handleRefresh = async () => {
 	isRefreshing.value = true;
@@ -91,10 +72,23 @@ const handleRefresh = async () => {
 				<span class="task-forecast__source" :class="{ 'task-forecast__source--ml': isMl }">
 					{{ translate(isMl ? "forecast.sourceMl" : "forecast.sourceRules") }}
 				</span>
+				<base-tooltip :label="translate('forecast.sourceAbout')" :max-width="300">
+					<template #content>
+						<p>
+							<strong>{{ translate("forecast.sourceMl") }}</strong> — {{ translate("forecast.sourceMlInfo") }}
+						</p>
+						<p>
+							<strong>{{ translate("forecast.sourceRules") }}</strong> — {{ translate("forecast.sourceRulesInfo") }}
+						</p>
+					</template>
+				</base-tooltip>
 			</base-flex>
-			<base-button text type="primary" :loading="isRefreshing" @click="handleRefresh">
-				{{ translate("forecast.refresh") }}
-			</base-button>
+			<base-flex align="center" :gap="2">
+				<base-button text type="primary" :loading="isRefreshing" @click="handleRefresh">
+					{{ translate("forecast.refresh") }}
+				</base-button>
+				<base-tooltip :label="translate('forecast.refreshAbout')" :content="translate('forecast.refreshInfo')" />
+			</base-flex>
 		</base-flex>
 
 		<div class="task-forecast__grid">
@@ -107,7 +101,7 @@ const handleRefresh = async () => {
 			</div>
 			<div class="task-forecast__metric">
 				<span class="task-forecast__caption">{{ translate("forecast.duration") }}</span>
-				<strong>{{ durationText }}</strong>
+				<strong>{{ duration }}</strong>
 			</div>
 		</div>
 
