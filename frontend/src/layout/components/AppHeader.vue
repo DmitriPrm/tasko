@@ -17,9 +17,15 @@ const authStore = useAuthStore();
 const layoutStore = useLayoutStore();
 const taskDrawer = useTaskDrawerStore();
 
-const { state: notifications, fetch: fetchNotifications } = useFetch(baseApi.notifications.getNotifications, "data", {
-	immediate: true,
-});
+// В колокольчике — только последние; все уведомления — на отдельной странице с пагинацией
+const { state: notifications, fetch: fetchNotifications } = useFetch(
+	baseApi.notifications.getNotifications,
+	"data.items",
+	{
+		immediate: true,
+		params: { perPage: 8 },
+	},
+);
 
 const { state: unread, fetch: fetchUnread } = useFetch(baseApi.notifications.getUnreadCount, "data", {
 	immediate: true,
@@ -109,6 +115,9 @@ onBeforeUnmount(() => window.clearInterval(timer));
 							<span>{{ item.body }}</span>
 						</button>
 					</div>
+					<router-link class="app-header__all-notices" :to="{ name: 'notifications' }">
+						{{ translate("notifications.showAll") }}
+					</router-link>
 				</el-popover>
 				<base-user-name v-if="authStore.user" class="app-header__user" :user="authStore.user" :size="32" />
 				<base-button
@@ -212,6 +221,18 @@ onBeforeUnmount(() => window.clearInterval(timer));
 		max-height: var(--mt-popup-max-height);
 		margin-top: map.get($spacers, 2);
 		overflow-y: auto;
+	}
+
+	&__all-notices {
+		display: block;
+		margin-top: map.get($spacers, 3);
+		padding-top: map.get($spacers, 3);
+		border-top: 1px solid var(--mt-color-gray-100);
+		color: var(--mt-color-primary);
+		font-size: map.get($font-sizes, 7);
+		font-weight: 600;
+		text-align: center;
+		text-decoration: none;
 	}
 
 	&__notice {

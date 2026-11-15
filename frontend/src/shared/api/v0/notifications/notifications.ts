@@ -1,12 +1,10 @@
-import { z } from "zod";
-
 import { createGet, createPatch } from "@/shared/api/helpers/api";
 import { ZWrapDTO } from "@/shared/api/helpers/ZWrapDTO";
-import { ZNotification, ZSuccess, ZUnreadCount } from "@/shared/api/v0/schemas";
+import { ZNotification, ZPaginated, ZSuccess, ZUnreadCount } from "@/shared/api/v0/schemas";
 
 export const getNotifications = createGet({
 	path: "/notifications",
-	type: ZWrapDTO(z.array(ZNotification)),
+	type: ZWrapDTO(ZPaginated(ZNotification)),
 });
 
 export const getUnreadCount = createGet({

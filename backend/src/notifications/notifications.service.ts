@@ -16,14 +16,23 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
 export class NotificationsService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async list(user: AuthUser) {
-		const items = await this.prisma.notification.findMany({
-			where: { userId: user.id },
-			orderBy: { createdAt: "desc" },
-			take: 50,
-		});
+	/** Уведомления постранично, новые сверху */
+	async list(user: AuthUser, query: { page?: number; perPage?: number; unreadOnly?: boolean } = {}) {
+		const page = query.page ?? 1;
+		const perPage = query.perPage ?? 20;
+		const where = { userId: user.id, ...(query.unreadOnly ? { isRead: false } : {}) };
 
-		return items.map((item) => ({
+		const [items, total] = await this.prisma.$transaction([
+			this.prisma.notification.findMany({
+				where,
+				orderBy: { createdAt: "desc" },
+				skip: (page - 1) * perPage,
+				take: perPage,
+			}),
+			this.prisma.notification.count({ where }),
+		]);
+
+		const rows = items.map((item) => ({
 			id: item.id,
 			type: item.type,
 			title: item.title,
@@ -32,6 +41,7 @@ export class NotificationsService {
 			isRead: item.isRead,
 			createdAt: item.createdAt.toISOString(),
 		}));
+		return { items: rows, total, page, perPage };
 	}
 
 	async markRead(user: AuthUser, id: string) {
