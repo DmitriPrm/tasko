@@ -433,6 +433,8 @@ model ProfileSection {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   title     String
+  /// Код иконки из набора интерфейса; пусто — иконка подбирается по названию раздела
+  icon      String?
   position  Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
 

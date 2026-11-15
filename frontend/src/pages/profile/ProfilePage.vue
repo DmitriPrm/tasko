@@ -248,6 +248,18 @@ const handleSavedRights = () => {
 
 const handlePickAvatar = () => avatarInput.value?.click();
 
+/** Аватар меняет только сам пользователь (сервер проверяет то же самое) */
+const canEditAvatar = computed(() => Boolean(profile.value?.canEditAvatar));
+const isAvatarViewerOpen = ref(false);
+
+const handleAvatarClick = () => {
+	if (profile.value?.avatarUrl) {
+		isAvatarViewerOpen.value = true;
+		return;
+	}
+	if (canEditAvatar.value) handlePickAvatar();
+};
+
 const cropperFile = ref<File | null>(null);
 const isCropperOpen = ref(false);
 const isAvatarSaving = ref(false);
@@ -308,13 +320,15 @@ watch(
 					<div class="profile-page__cover" aria-hidden="true" />
 					<div class="profile-page__hero-body">
 						<div class="profile-page__avatar-wrap">
+							<!-- Клик по фото открывает его целиком; менять аватар может только сам владелец -->
 							<button
-								v-if="profile.canEdit"
 								class="profile-page__avatar"
+								:class="{ 'profile-page__avatar--static': !profile.avatarUrl && !canEditAvatar }"
 								type="button"
-								:aria-label="translate('profile.changeAvatar')"
-								:title="translate('profile.changeAvatar')"
-								@click="handlePickAvatar"
+								:aria-label="profile.avatarUrl ? translate('profile.openAvatar') : translate('profile.changeAvatar')"
+								:title="profile.avatarUrl ? translate('profile.openAvatar') : ''"
+								:disabled="!profile.avatarUrl && !canEditAvatar"
+								@click="handleAvatarClick"
 							>
 								<base-avatar
 									:name="profile.fullName"
@@ -323,19 +337,17 @@ watch(
 									:src="profile.avatarUrl"
 									:size="96"
 								/>
-								<span class="profile-page__avatar-edit">
-									<el-icon :size="18"><edit /></el-icon>
-								</span>
 							</button>
-							<span v-else class="profile-page__avatar profile-page__avatar--static">
-								<base-avatar
-									:name="profile.fullName"
-									:initials="profile.initials"
-									:color="profile.avatarColor"
-									:src="profile.avatarUrl"
-									:size="96"
-								/>
-							</span>
+							<button
+								v-if="canEditAvatar"
+								class="profile-page__avatar-edit"
+								type="button"
+								:aria-label="translate('profile.changeAvatar')"
+								:title="translate('profile.changeAvatar')"
+								@click="handlePickAvatar"
+							>
+								<el-icon :size="16"><edit /></el-icon>
+							</button>
 						</div>
 						<div class="profile-page__identity">
 							<h2 class="profile-page__name">{{ profile.fullName }}</h2>
@@ -347,7 +359,7 @@ watch(
 								</el-tag>
 							</base-flex>
 						</div>
-						<base-button v-if="profile.canEdit" class="profile-page__hero-action" @click="handlePickAvatar">
+						<base-button v-if="canEditAvatar" class="profile-page__hero-action" @click="handlePickAvatar">
 							{{ translate("profile.changeAvatar") }}
 						</base-button>
 					</div>
@@ -357,6 +369,13 @@ watch(
 						type="file"
 						accept="image/png,image/jpeg,image/webp"
 						@change="handleAvatarFile"
+					/>
+					<el-image-viewer
+						v-if="isAvatarViewerOpen && profile.avatarUrl"
+						:url-list="[profile.avatarUrl]"
+						hide-on-click-modal
+						teleported
+						@close="isAvatarViewerOpen = false"
 					/>
 					<profile-avatar-cropper
 						v-model="isCropperOpen"
@@ -613,39 +632,53 @@ watch(
 	}
 
 	&__avatar-wrap {
+		position: relative;
 		flex-shrink: 0;
 	}
 
 	&__avatar {
-		position: relative;
 		display: block;
 		padding: 0;
 		border: 4px solid var(--mt-color-white);
 		border-radius: 50%;
 		background: var(--mt-color-white);
 		box-shadow: var(--mt-shadow);
-		cursor: pointer;
+		cursor: zoom-in;
+		transition: box-shadow 0.18s var(--mt-ease);
 
-		&--static {
-			cursor: default;
+		&:hover:not(:disabled),
+		&:focus-visible {
+			box-shadow: var(--mt-shadow-hover);
 		}
 
-		&:hover .profile-page__avatar-edit,
-		&:focus-visible .profile-page__avatar-edit {
-			opacity: 1;
+		&--static,
+		&:disabled {
+			cursor: default;
 		}
 	}
 
+	/* Значок «изменить» — отдельная кнопка, видна только владельцу */
 	&__avatar-edit {
 		position: absolute;
-		inset: 0;
+		right: 2px;
+		bottom: 2px;
 		display: grid;
 		place-items: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		border: 2px solid var(--mt-color-white);
 		border-radius: 50%;
-		background: rgba(15, 18, 38, 0.5);
-		color: #fff;
-		opacity: 0;
-		transition: opacity 0.18s var(--mt-ease);
+		background: var(--mt-color-primary);
+		color: var(--mt-color-white);
+		box-shadow: var(--mt-shadow);
+		cursor: pointer;
+		transition: transform 0.15s var(--mt-ease);
+
+		&:hover,
+		&:focus-visible {
+			transform: scale(1.08);
+		}
 	}
 
 	&__identity {

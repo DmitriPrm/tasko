@@ -115,6 +115,32 @@ export const Memo = createIcon("Memo", [
 	p("M9 17h4"),
 ]);
 export const InfoFilled = createIcon("InfoFilled", [c(12, 12, 9), p("M12 11v5"), p("M12 8h.01")]);
+/** Медаль на ленте — иконка достижений и иконка раздела профиля по умолчанию */
+export const Award = createIcon("Award", [
+	c(12, 9, 6),
+	p("M8.2 13.6L7 21.5l5-2.8 5 2.8-1.2-7.9"),
+	p("M12 6.4l.85 1.75 1.95.28-1.4 1.37.33 1.93L12 10.82l-1.73.91.33-1.93-1.4-1.37 1.95-.28z"),
+]);
+export const Briefcase = createIcon("Briefcase", [
+	r(3, 7, 18, 13, 2),
+	p("M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"),
+	p("M3 12.5h18"),
+]);
+export const Book = createIcon("Book", [
+	p("M4 19.5A2.5 2.5 0 0 1 6.5 17H20"),
+	p("M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"),
+]);
+export const Code = createIcon("Code", [p("M16 18l6-6-6-6"), p("M8 6l-6 6 6 6")]);
+export const Phone = createIcon("Phone", [
+	p(
+		"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z",
+	),
+]);
+export const Globe = createIcon("Globe", [c(12, 12, 9), p("M3 12h18"), p("M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z")]);
+export const Heart = createIcon("Heart", [
+	p("M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"),
+]);
+export const Flag = createIcon("Flag", [p("M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"), p("M4 22v-7")]);
 export const Warning = createIcon("Warning", [
 	p("M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"),
 	p("M12 9v4"),

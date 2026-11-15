@@ -3,7 +3,12 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { AuthUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
-import { CreateProfileFieldDto, ProfileSectionDto, UpdateProfileFieldDto } from "./dto/profile-section.dto";
+import {
+	CreateProfileFieldDto,
+	ProfileSectionDto,
+	UpdateProfileFieldDto,
+	UpdateProfileSectionDto,
+} from "./dto/profile-section.dto";
 import { ProfileSectionsService } from "./profile-sections.service";
 
 @ApiTags("profile")
@@ -22,9 +27,9 @@ export class ProfileSectionsController {
 		@CurrentUser() user: AuthUser,
 		@Param("userId") userId: string,
 		@Param("sectionId") sectionId: string,
-		@Body() dto: ProfileSectionDto,
+		@Body() dto: UpdateProfileSectionDto,
 	) {
-		return this.sections.renameSection(user, userId, sectionId, dto.title);
+		return this.sections.updateSection(user, userId, sectionId, dto);
 	}
 
 	@Delete("sections/:sectionId")

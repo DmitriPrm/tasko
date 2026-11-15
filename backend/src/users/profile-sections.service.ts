@@ -12,6 +12,7 @@ export function toSectionDto(section: SectionWithFields) {
 	return {
 		id: section.id,
 		title: section.title,
+		icon: section.icon,
 		position: section.position,
 		fields: section.fields.map((field) => ({
 			id: field.id,
@@ -51,12 +52,21 @@ export class ProfileSectionsService {
 		return toSectionDto(section);
 	}
 
-	async renameSection(actor: AuthUser, userId: string, sectionId: string, title: string) {
+	/** Переименовать раздел и/или сменить его иконку */
+	async updateSection(
+		actor: AuthUser,
+		userId: string,
+		sectionId: string,
+		dto: { title?: string; icon?: string | null },
+	) {
 		await this.assertCanEdit(actor, userId);
 		await this.getSection(userId, sectionId);
 		const section = await this.prisma.profileSection.update({
 			where: { id: sectionId },
-			data: { title: title.trim() },
+			data: {
+				...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+				...(dto.icon !== undefined ? { icon: dto.icon } : {}),
+			},
 			include: { fields: { orderBy: { position: "asc" } } },
 		});
 		return toSectionDto(section);

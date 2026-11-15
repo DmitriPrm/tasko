@@ -144,4 +144,12 @@ describe("UsersService", () => {
 
 		await expect(service.update(user, "missing", { isActive: false })).rejects.toBeInstanceOf(NotFoundException);
 	});
+
+	it("does not let anyone, even an administrator, change someone else's avatar", async () => {
+		const admin = { ...user, id: "admin", systemRole: SystemRole.ADMIN };
+		await expect(
+			service.updateAvatar(admin, "u1", { buffer: Buffer.from("x"), mimetype: "image/png" }),
+		).rejects.toThrow("Аватар может изменить только сам пользователь");
+		expect(prisma.user.update).not.toHaveBeenCalled();
+	});
 });

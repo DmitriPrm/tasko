@@ -44,6 +44,7 @@ export const ZProfileField = z.object({
 export const ZProfileSection = z.object({
 	id: z.string(),
 	title: z.string(),
+	icon: z.string().nullable().optional(),
 	position: z.number(),
 	fields: z.array(ZProfileField),
 });
@@ -51,6 +52,7 @@ export const ZProfileSection = z.object({
 export const ZProfile = ZUser.extend({
 	canEdit: z.boolean(),
 	canEditRights: z.boolean(),
+	canEditAvatar: z.boolean().optional(),
 	permissions: z.array(z.string()),
 	sections: z.array(ZProfileSection),
 });

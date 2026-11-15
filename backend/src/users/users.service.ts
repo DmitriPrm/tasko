@@ -145,6 +145,8 @@ export class UsersService {
 				? await this.access.has(actor, "PROFILE_EDIT_OWN")
 				: await this.access.has(actor, "PROFILE_EDIT_OTHERS"),
 			canEditRights: !isSelf && (await this.access.has(actor, "PROFILE_EDIT_RIGHTS")),
+			// Аватар меняет только сам пользователь — даже администратор не может подменить чужое фото
+			canEditAvatar: isSelf,
 			permissions,
 			sections: sections.map(toSectionDto),
 		};
@@ -163,8 +165,7 @@ export class UsersService {
 	}
 
 	async updateAvatar(actor: AuthUser, userId: string, file?: { buffer: Buffer; mimetype: string }) {
-		const profile = await this.getProfile(actor, userId);
-		if (!profile.canEdit) throw new ForbiddenException("Недостаточно прав для изменения профиля");
+		if (actor.id !== userId) throw new ForbiddenException("Аватар может изменить только сам пользователь");
 		if (!file?.buffer?.length) throw new BadRequestException("Выберите изображение");
 
 		const avatarFile = saveUploadedAvatar(userId, file.buffer, file.mimetype);
