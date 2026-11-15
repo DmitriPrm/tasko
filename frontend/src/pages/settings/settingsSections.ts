@@ -1,7 +1,7 @@
 import type { Component } from "vue";
 import { defineAsyncComponent } from "vue";
 
-import { Clock, PieChart, Setting, User } from "@/shared/ui/icon/icons";
+import { Bell, Clock, Lock, PieChart, Setting, User, Board } from "@/shared/ui/icon/icons";
 
 export type SettingsGroup = "personal" | "system";
 
@@ -19,6 +19,24 @@ export interface SettingsSection {
  * Новый раздел добавляется сюда: меню, адрес и поиск подхватят его сами.
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
+	{
+		id: "account",
+		group: "personal",
+		icon: Lock,
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsAccount.vue")),
+	},
+	{
+		id: "notifications",
+		group: "personal",
+		icon: Bell,
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsNotifications.vue")),
+	},
+	{
+		id: "workspace",
+		group: "personal",
+		icon: Board,
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsWorkspace.vue")),
+	},
 	{
 		id: "appearance",
 		group: "personal",

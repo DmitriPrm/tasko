@@ -243,6 +243,67 @@ describe("TASKO API (e2e)", () => {
 		});
 	});
 
+	describe("Сессии: смена пароля и выход на всех устройствах", () => {
+		it("после смены пароля старый токен не работает, новый — работает", async () => {
+			await api()
+				.post("/api/auth/change-password")
+				.set(as("executor"))
+				.send({ currentPassword: "неверный1", newPassword: "NewPassword1" })
+				.expect(400);
+
+			const changed = await api()
+				.post("/api/auth/change-password")
+				.set(as("executor"))
+				.send({ currentPassword: PASSWORD, newPassword: "NewPassword1" })
+				.expect(201);
+			await api().get("/api/auth/me").set(as("executor")).expect(401);
+
+			tokens.executor = changed.body.data.accessToken;
+			await api().get("/api/auth/me").set(as("executor")).expect(200);
+			await api().post("/api/auth/login").send({ email: "executor@e2e.local", password: "NewPassword1" }).expect(201);
+		});
+
+		it("«выйти на всех устройствах» отзывает остальные сессии", async () => {
+			const other = await api().post("/api/auth/login").send({ email: "manager@e2e.local", password: PASSWORD });
+			const otherToken = other.body.data.accessToken;
+
+			const fresh = await api().post("/api/auth/logout-all").set(as("manager")).expect(201);
+			await api()
+				.get("/api/auth/me")
+				.set({ Authorization: `Bearer ${otherToken}` })
+				.expect(401);
+
+			tokens.manager = fresh.body.data.accessToken;
+			await api().get("/api/auth/me").set(as("manager")).expect(200);
+		});
+	});
+
+	describe("Личные настройки уведомлений", () => {
+		it("отключённое уведомление не попадает в список, но сохраняется приглушённым", async () => {
+			await api()
+				.patch("/api/me/preferences")
+				.set(as("executor"))
+				.send({ notifications: { TASK_ASSIGNED: { inApp: false } } })
+				.expect(200);
+
+			const task = await api()
+				.post(`/api/projects/${ids.project}/tasks`)
+				.set(as("manager"))
+				.send({ title: "Тихая задача", assigneeId: ids.executor })
+				.expect(201);
+			createdTaskIds.push(task.body.data.id);
+
+			const list = await api().get("/api/notifications").set(as("executor")).expect(200);
+			const titles = list.body.data.items.map((item: { body: string }) => item.body);
+			expect(titles.some((body: string) => body.includes("Тихая задача"))).toBe(false);
+
+			const stored = await prisma.notification.findFirst({
+				where: { userId: ids.executor, relatedTaskId: task.body.data.id },
+			});
+			expect(stored).toMatchObject({ muted: true, isRead: true });
+		});
+	});
+
 	describe("Заблокированный пользователь теряет доступ", () => {
 		it("сразу, даже с действующим токеном", async () => {
 			await api().patch(`/api/users/${ids.outsider}`).set(as("admin")).send({ isActive: false }).expect(200);

@@ -5,10 +5,12 @@ import { useRoute, useRouter } from "vue-router";
 import AuthShell from "@/pages/auth/components/AuthShell.vue";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import { useAuthStore } from "@/store/auth";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const userSettings = useUserSettingsStore();
 const isSubmitting = ref(false);
 const form = reactive({
 	email: import.meta.env.DEV ? "manager@tasko.local" : "",
@@ -26,7 +28,9 @@ const handleSubmit = async () => {
 	isSubmitting.value = true;
 	try {
 		await authStore.login({ email: form.email.trim(), password: form.password });
-		await router.push(redirectTarget());
+		const target = redirectTarget();
+		const startPage = userSettings.preferences?.startPage;
+		await router.push(target === "/" && startPage ? { name: startPage } : target);
 	} catch {
 		// Сообщение об ошибке показывает перехватчик API
 	} finally {

@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import { baseApi } from "@/shared/api/baseApi";
 import type { User } from "@/shared/api/v0/schemas";
 import { JwtService } from "@/shared/lib/services/JwtService";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 export const useAuthStore = defineStore("auth", () => {
 	const user = ref<User | null>(null);
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore("auth", () => {
 		const { data } = await baseApi.auth.login(undefined, undefined, payload);
 		JwtService.saveTokens(data.data);
 		user.value = data.data.user;
+		await useUserSettingsStore().load();
 	}
 
 	async function register(payload: { fullName: string; email: string; password: string; inviteToken?: string }) {
@@ -42,6 +44,7 @@ export const useAuthStore = defineStore("auth", () => {
 		try {
 			const { data } = await baseApi.auth.getMe();
 			user.value = data.data;
+			await useUserSettingsStore().load();
 		} catch {
 			JwtService.destroyTokens();
 			user.value = null;
@@ -53,6 +56,7 @@ export const useAuthStore = defineStore("auth", () => {
 	function logout() {
 		JwtService.destroyTokens();
 		user.value = null;
+		useUserSettingsStore().reset();
 	}
 
 	return {

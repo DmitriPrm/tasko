@@ -38,6 +38,7 @@ import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 import { useAuthStore } from "@/store/auth";
 import { useFavoritesStore } from "@/store/favorites";
 import { useTaskDrawerStore } from "@/store/taskDrawer";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const route = useRoute();
 const router = useRouter();
@@ -45,7 +46,8 @@ const authStore = useAuthStore();
 const favoritesStore = useFavoritesStore();
 const taskDrawer = useTaskDrawerStore();
 const activeTab = ref("tasks");
-const tasksView = ref<TasksView>("board");
+const userSettings = useUserSettingsStore();
+const tasksView = ref<TasksView>(userSettings.projectView());
 const search = ref("");
 const sort = ref<TasksSort>("default");
 const lastProjectId = ref(String(route.params.id ?? ""));

@@ -41,7 +41,7 @@ export class AuthService {
 		}
 
 		return {
-			...this.issueTokens(user.id, user.email),
+			...this.issueTokens(user),
 			user: {
 				...toUserDto(user),
 				permissions: await this.access.listEffective(user),
@@ -92,7 +92,7 @@ export class AuthService {
 		}
 
 		return {
-			...this.issueTokens(user.id, user.email),
+			...this.issueTokens(user),
 			user: {
 				...toUserDto(user),
 				permissions: await this.access.listEffective(user),
@@ -155,11 +155,11 @@ export class AuthService {
 			}
 
 			const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-			if (!user || !user.isActive) {
+			if (!user || !user.isActive || user.tokenVersion !== (payload.ver ?? 0)) {
 				throw new UnauthorizedException("Пользователь недоступен");
 			}
 
-			return this.issueTokens(user.id, user.email);
+			return this.issueTokens(user);
 		} catch {
 			throw new UnauthorizedException("Недействительный токен");
 		}
@@ -177,9 +177,36 @@ export class AuthService {
 		};
 	}
 
-	private issueTokens(userId: string, email: string) {
-		const accessPayload: JwtPayload = { sub: userId, email, type: "access" };
-		const refreshPayload: JwtPayload = { sub: userId, email, type: "refresh" };
+	/** Сменить пароль: проверяем текущий, отзываем все остальные сессии, текущей выдаём новые токены */
+	async changePassword(actor: AuthUser, currentPassword: string, newPassword: string) {
+		const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
+		if (!user || !user.isActive) throw new UnauthorizedException("Пользователь недоступен");
+		if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+			throw new BadRequestException("Текущий пароль указан неверно");
+		}
+		if (await bcrypt.compare(newPassword, user.passwordHash)) {
+			throw new BadRequestException("Новый пароль совпадает с текущим");
+		}
+		const updated = await this.prisma.user.update({
+			where: { id: user.id },
+			data: { passwordHash: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
+		});
+		return this.issueTokens(updated);
+	}
+
+	/** Выйти на всех устройствах: старые токены перестают работать, текущая сессия продолжается */
+	async logoutEverywhere(actor: AuthUser) {
+		const updated = await this.prisma.user.update({
+			where: { id: actor.id },
+			data: { tokenVersion: { increment: 1 } },
+		});
+		return this.issueTokens(updated);
+	}
+
+	private issueTokens(user: { id: string; email: string; tokenVersion?: number }) {
+		const ver = user.tokenVersion ?? 0;
+		const accessPayload: JwtPayload = { sub: user.id, email: user.email, type: "access", ver };
+		const refreshPayload: JwtPayload = { sub: user.id, email: user.email, type: "refresh", ver };
 
 		return {
 			accessToken: this.jwtService.sign(accessPayload, {

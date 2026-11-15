@@ -6,6 +6,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
 import { AuthService } from "./auth.service";
 import { AuthUser } from "./auth.types";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -48,6 +49,19 @@ export class AuthController {
 	@Post("refresh")
 	refresh(@Body() dto: RefreshDto) {
 		return this.authService.refresh(dto.refreshToken);
+	}
+
+	@ApiBearerAuth()
+	@Throttle({ default: { limit: 10, ttl: 60_000 } })
+	@Post("change-password")
+	changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+		return this.authService.changePassword(user, dto.currentPassword, dto.newPassword);
+	}
+
+	@ApiBearerAuth()
+	@Post("logout-all")
+	logoutAll(@CurrentUser() user: AuthUser) {
+		return this.authService.logoutEverywhere(user);
 	}
 
 	@ApiBearerAuth()

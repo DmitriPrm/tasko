@@ -2,6 +2,7 @@ import { NotificationType, TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 import { SystemSettingsService } from "../system-settings/system-settings.service";
+import { NotificationsService } from "./notifications.service";
 import { DeadlineRemindersService } from "./deadline-reminders.service";
 
 describe("DeadlineRemindersService", () => {
@@ -10,9 +11,14 @@ describe("DeadlineRemindersService", () => {
 		notification: { createMany: jest.fn() },
 	};
 	const settings = { section: jest.fn() };
+	// Доставка с учётом личных настроек проверяется отдельно; здесь она просто пишет в базу
+	const notifications = {
+		deliver: jest.fn(async (data: unknown[]) => prisma.notification.createMany({ data })),
+	};
 	const service = new DeadlineRemindersService(
 		prisma as unknown as PrismaService,
 		settings as unknown as SystemSettingsService,
+		notifications as unknown as NotificationsService,
 	);
 	const now = new Date("2026-11-10T09:00:00Z");
 

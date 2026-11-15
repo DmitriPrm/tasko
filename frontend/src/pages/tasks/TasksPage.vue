@@ -19,6 +19,7 @@ import TaskFilterChips from "@/shared/ui/task-filters/TaskFilterChips.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 import { useAuthStore } from "@/store/auth";
 import { useTaskDrawerStore } from "@/store/taskDrawer";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const authStore = useAuthStore();
 const taskDrawer = useTaskDrawerStore();
@@ -50,7 +51,11 @@ const users = computed(() => {
 });
 
 // По умолчанию — только открытые: закрытые и отменённые не мешают работать (как в Jira и Asana)
-const filters = useTaskFilters({ state: "open" }, () => ({ users: users.value, projects: projects.value }));
+const userSettings = useUserSettingsStore();
+const filters = useTaskFilters({ state: userSettings.preferences?.showClosedTasks ? "all" : "open" }, () => ({
+	users: users.value,
+	projects: projects.value,
+}));
 
 const fields = computed<TaskFilterField[]>(() => [
 	"state",

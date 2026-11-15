@@ -33,3 +33,15 @@ export const getMe = createGet({
 	path: "/auth/me",
 	type: ZWrapDTO(ZUser),
 });
+
+/** Сменить пароль; ответ — новые токены для текущей сессии (остальные отзываются) */
+export const changePassword = createPost({
+	path: "/auth/change-password",
+	type: ZWrapDTO(ZTokens),
+});
+
+/** Выйти на всех устройствах; текущая сессия получает новые токены */
+export const logoutAll = createPost({
+	path: "/auth/logout-all",
+	type: ZWrapDTO(ZTokens),
+});

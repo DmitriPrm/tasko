@@ -10,3 +10,4 @@ export * as settings from "./settings/settings";
 export * as tableLayouts from "./table-layouts/table-layouts";
 export * as tasks from "./tasks/tasks";
 export * as users from "./users/users";
+export * as me from "./me/me";

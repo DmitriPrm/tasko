@@ -3,6 +3,7 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 import { NotificationType, TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "./notifications.service";
 import { SystemSettingsService } from "../system-settings/system-settings.service";
 
 /** Раз в час напоминает исполнителям о задачах, срок которых скоро наступит */
@@ -13,6 +14,7 @@ export class DeadlineRemindersService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly settings: SystemSettingsService,
+		private readonly notifications: NotificationsService,
 	) {}
 
 	@Cron(CronExpression.EVERY_HOUR)
@@ -64,7 +66,7 @@ export class DeadlineRemindersService {
 		});
 
 		if (!data.length) return 0;
-		await this.prisma.notification.createMany({ data });
+		await this.notifications.deliver(data);
 		return data.length;
 	}
 }

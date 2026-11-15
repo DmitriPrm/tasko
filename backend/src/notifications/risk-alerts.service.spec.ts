@@ -2,6 +2,7 @@ import { TaskStatus } from "@prisma/client";
 
 import { PrismaService } from "../prisma/prisma.service";
 import { SystemSettingsService } from "../system-settings/system-settings.service";
+import { NotificationsService } from "./notifications.service";
 import { RiskAlertsService } from "./risk-alerts.service";
 
 describe("RiskAlertsService", () => {
@@ -25,9 +26,14 @@ describe("RiskAlertsService", () => {
 		notification: { createMany: jest.fn() },
 	};
 	const settings = { section: jest.fn() };
+	// Доставка с учётом личных настроек проверяется отдельно; здесь она просто пишет в базу
+	const notifications = {
+		deliver: jest.fn(async (data: unknown[]) => prisma.notification.createMany({ data })),
+	};
 	const service = new RiskAlertsService(
 		prisma as unknown as PrismaService,
 		settings as unknown as SystemSettingsService,
+		notifications as unknown as NotificationsService,
 	);
 
 	beforeEach(() => {

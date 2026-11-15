@@ -4,6 +4,7 @@ import { NotificationType, Prisma, ProjectRole, TaskStatus } from "@prisma/clien
 
 import { latestPredictionInclude } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { NotificationsService } from "./notifications.service";
 import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { buildForecast } from "../tasks/forecast";
 
@@ -19,6 +20,7 @@ export class RiskAlertsService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly settings: SystemSettingsService,
+		private readonly notifications: NotificationsService,
 	) {}
 
 	@Cron(CronExpression.EVERY_HOUR)
@@ -85,7 +87,7 @@ export class RiskAlertsService {
 		});
 
 		if (!data.length) return 0;
-		await this.prisma.notification.createMany({ data });
+		await this.notifications.deliver(data);
 		return data.length;
 	}
 }

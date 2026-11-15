@@ -429,6 +429,15 @@ export const ZMlStatus = z.object({
 export const ZMlReload = z.object({ reloaded: z.boolean(), models: ZMlModels.nullable() });
 export const ZMlRecompute = z.object({ total: z.number(), refreshed: z.number() });
 
+const ZChannelPrefs = z.object({ inApp: z.boolean(), email: z.boolean() });
+
+export const ZUserPreferences = z.object({
+	notifications: z.record(ZNotificationType, ZChannelPrefs),
+	startPage: z.enum(["dashboard", "tasks", "projects"]),
+	projectView: z.enum(["board", "list"]).nullable(),
+	showClosedTasks: z.boolean(),
+});
+
 export const ZTableLayout = z.object({
 	code: z.string(),
 	widths: z.record(z.string(), z.number()),
@@ -459,6 +468,7 @@ export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
 export type SystemSettings = z.infer<typeof ZSystemSettings>;
+export type UserPreferences = z.infer<typeof ZUserPreferences>;
 export type PublicSettings = z.infer<typeof ZPublicSettings>;
 export type MlStatus = z.infer<typeof ZMlStatus>;
 export type WorkloadItem = z.infer<typeof ZWorkloadItem>;

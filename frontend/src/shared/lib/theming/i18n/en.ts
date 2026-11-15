@@ -442,6 +442,77 @@ export const en = {
 		},
 	},
 	settings: {
+		account: {
+			passwordTitle: "Password",
+			passwordHint: "After changing the password all other devices will be signed out.",
+			current: "Current password",
+			next: "New password",
+			repeat: "Repeat the new password",
+			mismatch: "Passwords do not match",
+			ruleLength: "At least 8 characters",
+			ruleLetter: "Contains a letter",
+			ruleDigit: "Contains a digit",
+			change: "Change password",
+			passwordChanged: "Password changed, other devices were signed out",
+			sessionsTitle: "Sessions",
+			sessionsHint:
+				"If you signed in on someone else's computer or lost your phone, end all other sessions. This device stays signed in.",
+			logoutAll: "Sign out on all other devices",
+			logoutAllText: "All other devices will be signed out. This device stays signed in.",
+			logoutAllConfirm: "Sign out",
+			loggedOutAll: "Other sessions ended",
+			profileTitle: "Profile",
+			profileHint: "Name, photo and about sections are edited in the profile.",
+			openProfile: "Open profile",
+		},
+		notifications: {
+			event: "Event",
+			inApp: "In the app",
+			email: "By email",
+			hint: "Changes are saved immediately. Emails are sent when mail (SMTP) is configured on the server. Project invitations in the app cannot be turned off.",
+			types: {
+				TASK_ASSIGNED: {
+					title: "I was assigned a task",
+					hint: "A new task for you",
+				},
+				STATUS_CHANGED: {
+					title: "A task status changed",
+					hint: "Your task or a task you created",
+				},
+				DEADLINE_CHANGED: {
+					title: "A task deadline changed",
+					hint: "Your task or a task you created",
+				},
+				DEADLINE_APPROACHING: {
+					title: "Deadline soon",
+					hint: "A reminder before the deadline",
+				},
+				HIGH_RISK: {
+					title: "High risk of missing a deadline",
+					hint: "The forecast says the task may be late",
+				},
+				PROJECT_INVITATION: {
+					title: "Project invitation",
+					hint: "Needed to accept the invitation",
+				},
+			},
+		},
+		workspace: {
+			startPage: "Start page after sign-in",
+			pages: {
+				dashboard: "Overview",
+				tasks: "Tasks",
+				projects: "Projects",
+			},
+			projectView: "Default project view",
+			viewSystem: "System default",
+			view: {
+				board: "Board",
+				list: "List",
+			},
+			showClosed: "Show closed tasks on the Tasks page",
+			hint: "Changes are saved immediately and apply on all your devices.",
+		},
 		saved: "Settings saved",
 		appearanceHint: "Language and theme are saved in this browser and apply immediately.",
 		groups: {
@@ -449,6 +520,18 @@ export const en = {
 			system: "System",
 		},
 		sections: {
+			account: {
+				title: "Account",
+				description: "Password, active sessions and profile.",
+			},
+			notifications: {
+				title: "Notifications",
+				description: "Which events to send and where: in the app or by email.",
+			},
+			workspace: {
+				title: "Workspace",
+				description: "Start page and default task view.",
+			},
 			appearance: {
 				title: "Appearance",
 				description: "Interface language and color theme.",
