@@ -1,3 +1,4 @@
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TasksService } from "../tasks/tasks.service";
 import * as storage from "./attachment-storage";
@@ -30,7 +31,14 @@ describe("AttachmentsService", () => {
 		getViewableTask: jest.fn().mockResolvedValue({ id: "t1" }),
 		getEditableTask: jest.fn(),
 	};
-	const service = new AttachmentsService(prisma as unknown as PrismaService, tasks as unknown as TasksService);
+	const settings = {
+		section: jest.fn().mockReturnValue({ maxSizeMb: 10, allowedTypes: ["application/pdf", "image/png"] }),
+	};
+	const service = new AttachmentsService(
+		settings as unknown as SystemSettingsService,
+		prisma as unknown as PrismaService,
+		tasks as unknown as TasksService,
+	);
 	const user = { id: "u1", email: "u@tasko.local", fullName: "U", systemRole: "EXECUTOR" as const, isActive: true };
 	const uploader = { id: "u1", fullName: "U", email: "u@tasko.local", createdAt: new Date(), updatedAt: new Date() };
 	const pdf = { buffer: Buffer.from("x"), mimetype: "application/pdf", originalname: "plan.pdf", size: 1 };

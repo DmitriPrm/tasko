@@ -2,29 +2,16 @@ import { randomUUID } from "crypto";
 import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 
+import { MAX_ATTACHMENT_LIMIT_MB, SUPPORTED_ATTACHMENT_TYPES } from "../system-settings/system-settings";
+
 /** Локальное хранилище; позже можно заменить на S3/MinIO, не меняя таблицу attachments */
 export const ATTACHMENT_DIR = path.join(process.cwd(), "storage", "attachments");
 
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+/** Жёсткий предел для приёма файла сервером; рабочий лимит задаёт администратор в настройках */
+export const MAX_ATTACHMENT_BYTES = MAX_ATTACHMENT_LIMIT_MB * 1024 * 1024;
 
-/** Разрешённые типы файлов и расширение, под которым файл ляжет на диск */
-export const ALLOWED_MIME: Record<string, string> = {
-	"image/png": "png",
-	"image/jpeg": "jpg",
-	"image/gif": "gif",
-	"image/webp": "webp",
-	"application/pdf": "pdf",
-	"text/plain": "txt",
-	"text/csv": "csv",
-	"application/zip": "zip",
-	"application/x-zip-compressed": "zip",
-	"application/msword": "doc",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-	"application/vnd.ms-excel": "xls",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-	"application/vnd.ms-powerpoint": "ppt",
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
-};
+/** Поддерживаемые типы файлов и расширение, под которым файл ляжет на диск */
+export const ALLOWED_MIME = SUPPORTED_ATTACHMENT_TYPES;
 
 /**
  * Имя файла для показа: без путей и служебных символов, не длиннее 200 знаков.

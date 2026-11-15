@@ -63,6 +63,7 @@ export const SUPPORTED_ATTACHMENT_TYPES: Record<string, string> = {
 	"text/plain": "txt",
 	"text/csv": "csv",
 	"application/zip": "zip",
+	"application/x-zip-compressed": "zip",
 	"application/msword": "doc",
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 	"application/vnd.ms-excel": "xls",

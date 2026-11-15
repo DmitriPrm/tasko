@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Patch, Put } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, Put } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Public } from "../common/decorators/public.decorator";
 import { AuthUser } from "../auth/auth.types";
 import { SavePermissionsDto } from "./dto/save-permissions.dto";
 import { SettingsService } from "./settings.service";
@@ -29,7 +30,14 @@ export class SettingsController {
 		return this.settingsService.updateSystem(user, patch);
 	}
 
-	/** То, что нужно интерфейсу любого пользователя: пороги риска, ограничения файлов, вид проекта */
+	/** Отправить тестовое письмо себе: проверить, что почта настроена */
+	@Post("mail/test")
+	testMail(@CurrentUser() user: AuthUser) {
+		return this.settingsService.testMail(user);
+	}
+
+	/** То, что нужно интерфейсу любого пользователя (и странице регистрации): пороги, файлы, вид проекта */
+	@Public()
 	@Get("public")
 	getPublic() {
 		return this.settingsService.getPublic();

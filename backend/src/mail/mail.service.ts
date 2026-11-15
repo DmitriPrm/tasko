@@ -45,6 +45,11 @@ export class MailService {
 	}
 
 	/** Возвращает true, если письмо передано SMTP-серверу. Ошибки отправки не выбрасываются. */
+	/** Настроен ли SMTP; без него письма только пишутся в лог */
+	get configured() {
+		return this.transporter !== null;
+	}
+
 	async send(message: MailMessage): Promise<boolean> {
 		if (!this.transporter) {
 			this.logger.log(`[mail:stub] to=${message.to} subject="${message.subject}"\n${message.text}`);

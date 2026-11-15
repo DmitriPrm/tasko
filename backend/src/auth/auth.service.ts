@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+	BadRequestException,
+	ConflictException,
+	ForbiddenException,
+	Injectable,
+	UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma, SystemRole, User } from "@prisma/client";
@@ -11,6 +17,7 @@ import { InvitationsService } from "../invitations/invitations.service";
 import { MailService } from "../mail/mail.service";
 import { verifyEmailMail } from "../mail/mail.templates";
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { toUserDto } from "../users/user.mapper";
 import { AuthUser, JwtPayload } from "./auth.types";
 import { LoginDto } from "./dto/login.dto";
@@ -27,6 +34,7 @@ export class AuthService {
 		private readonly access: AccessService,
 		private readonly mail: MailService,
 		private readonly invitations: InvitationsService,
+		private readonly settings: SystemSettingsService,
 	) {}
 
 	async login(dto: LoginDto) {
@@ -59,6 +67,18 @@ export class AuthService {
 		const invitation = dto.inviteToken ? await this.invitations.findActiveByToken(dto.inviteToken) : null;
 		const verifiedByInvitation = Boolean(invitation && invitation.email.toLowerCase() === email);
 
+		// Правила регистрации задаёт администратор; приглашённым они не мешают
+		const rules = this.settings.section("registration");
+		if (!verifiedByInvitation) {
+			if (!rules.open) throw new ForbiddenException("Регистрация закрыта. Попросите приглашение у администратора");
+			const domain = email.split("@")[1] ?? "";
+			if (rules.allowedDomains.length && !rules.allowedDomains.includes(domain)) {
+				throw new ForbiddenException(
+					`Регистрация доступна только для адресов ${rules.allowedDomains.map((item) => `@${item}`).join(", ")}`,
+				);
+			}
+		}
+
 		let created: User;
 		try {
 			created = await this.prisma.user.create({
@@ -66,7 +86,7 @@ export class AuthService {
 					email,
 					fullName: dto.fullName.trim(),
 					passwordHash: await bcrypt.hash(dto.password, 10),
-					systemRole: SystemRole.EXECUTOR,
+					systemRole: rules.defaultRole === "MANAGER" ? SystemRole.MANAGER : SystemRole.EXECUTOR,
 					emailVerifiedAt: verifiedByInvitation ? new Date() : null,
 				},
 			});

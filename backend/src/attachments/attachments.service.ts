@@ -5,11 +5,11 @@ import { Attachment, User } from "@prisma/client";
 
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { TasksService } from "../tasks/tasks.service";
 import { toUserDto } from "../users/user.mapper";
 import {
 	ALLOWED_MIME,
-	MAX_ATTACHMENT_BYTES,
 	normalizeFileName,
 	removeAttachmentFile,
 	resolveAttachmentPath,
@@ -38,6 +38,7 @@ function toAttachmentDto(item: Attachment & { uploader: User }) {
 @Injectable()
 export class AttachmentsService {
 	constructor(
+		private readonly settings: SystemSettingsService,
 		private readonly prisma: PrismaService,
 		private readonly tasks: TasksService,
 	) {}
@@ -56,9 +57,14 @@ export class AttachmentsService {
 	async upload(user: AuthUser, taskId: string, file?: UploadedAttachment) {
 		await this.tasks.getViewableTask(user, taskId);
 		if (!file) throw new BadRequestException("Файл не передан");
-		if (file.size > MAX_ATTACHMENT_BYTES) throw new BadRequestException("Файл больше 10 МБ");
+		const limits = this.settings.section("attachments");
+		if (file.size > limits.maxSizeMb * 1024 * 1024) {
+			throw new BadRequestException(`Файл больше ${limits.maxSizeMb} МБ`);
+		}
 		const ext = ALLOWED_MIME[file.mimetype];
-		if (!ext) throw new BadRequestException("Такой тип файла нельзя прикрепить");
+		if (!ext || !limits.allowedTypes.includes(file.mimetype)) {
+			throw new BadRequestException("Такой тип файла нельзя прикрепить");
+		}
 
 		const storageKey = saveAttachmentFile(taskId, file.buffer, ext);
 		try {

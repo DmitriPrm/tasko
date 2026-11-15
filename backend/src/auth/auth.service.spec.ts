@@ -1,3 +1,4 @@
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { BadRequestException, ConflictException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
@@ -59,6 +60,9 @@ describe("AuthService", () => {
 		access as unknown as AccessService,
 		mail as unknown as MailService,
 		invitations as unknown as InvitationsService,
+		{
+			section: jest.fn().mockReturnValue({ open: true, allowedDomains: [], defaultRole: "EXECUTOR" }),
+		} as unknown as SystemSettingsService,
 	);
 
 	const user = {

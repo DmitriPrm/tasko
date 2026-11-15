@@ -8,13 +8,14 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { RiskAlertsService } from "../notifications/risk-alerts.service";
 import { latestPredictionInclude, PredictionsService, StoredPrediction } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { ensureDefaultColumns, findColumnByStatus } from "../projects/project-columns.service";
 import { CreateTaskDto } from "./dto/create-task.dto";
 import { TasksQueryDto } from "./dto/tasks-query.dto";
 import { TransitionTaskDto } from "./dto/transition-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
-import { isTaskStarted, TASK_TRANSITIONS } from "./task.constants";
+import { allowedTransitions, isTaskStarted } from "./task.constants";
 import { getTaskFields } from "./task.form";
 import { toTaskDto } from "./task.mapper";
 
@@ -66,6 +67,7 @@ export class TasksService {
 		private readonly access: AccessService,
 		private readonly predictions: PredictionsService,
 		private readonly riskAlerts: RiskAlertsService,
+		private readonly settings: SystemSettingsService,
 	) {}
 
 	async listByProject(user: AuthUser, projectId: string, query: TasksQueryDto) {
@@ -328,7 +330,7 @@ export class TasksService {
 			return toTaskDto(moved);
 		}
 
-		const allowed = TASK_TRANSITIONS[task.status];
+		const allowed = allowedTransitions(task.status, this.settings.section("projects").strictWorkflow);
 		if (!allowed.includes(nextStatus)) {
 			throw new BadRequestException("Недопустимый переход статуса");
 		}

@@ -1,3 +1,4 @@
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
@@ -45,6 +46,7 @@ describe("TasksService", () => {
 		access as unknown as AccessService,
 		predictions as unknown as PredictionsService,
 		riskAlerts as unknown as RiskAlertsService,
+		{ section: jest.fn().mockReturnValue({ strictWorkflow: false }) } as unknown as SystemSettingsService,
 	);
 
 	const actor = {
@@ -240,6 +242,7 @@ describe("TasksService.list access", () => {
 		{} as unknown as AccessService,
 		{} as unknown as PredictionsService,
 		{} as unknown as RiskAlertsService,
+		{} as unknown as SystemSettingsService,
 	);
 
 	const executor = {
