@@ -48,6 +48,19 @@ Swagger: `http://localhost:3000/docs`
 ## Other
 
 - `GET /ml/status` — подключён ли ML-сервис и какие модели активны (алгоритм, метрики на тесте)
+- `POST /ml/reload`, `POST /ml/recompute` — перечитать модели, пересчитать прогнозы открытых задач (право `SETTINGS_SYSTEM`)
+
+## Settings
+
+- `GET /settings/public` — без входа: пороги риска, ограничения файлов, вид проекта, правила регистрации
+- `GET/PATCH /settings/system` — системные настройки по разделам `risk`, `deadlines`, `ml`, `registration`, `attachments`, `projects` (право `SETTINGS_SYSTEM`)
+- `GET/PUT /settings/permissions` — права ролей
+- `POST /settings/mail/test` — тестовое письмо себе
+- `GET /settings/data/tasks.csv?projectId=` — задачи для Excel
+- `GET /settings/data/ml-dataset.csv` — обезличенный набор для ML
+- `GET /settings/data/audit?page&perPage&projectId&userId` — журнал действий
+- `GET/PATCH /me/preferences` — личные настройки: уведомления, стартовая страница, вид проекта
+- `POST /auth/change-password`, `POST /auth/logout-all` — смена пароля и выход на других устройствах (старые токены отзываются)
 
 - `GET /dashboard`
 - `GET /notifications`
