@@ -12,6 +12,7 @@ import { AuthModule } from "./auth/auth.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { CommentsModule } from "./comments/comments.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { DataExportModule } from "./data-export/data-export.module";
 import { InvitationsModule } from "./invitations/invitations.module";
 import { MailModule } from "./mail/mail.module";
 import { HealthController } from "./health/health.controller";
@@ -48,6 +49,7 @@ import { UsersModule } from "./users/users.module";
 		AvatarsModule,
 		DashboardModule,
 		SettingsModule,
+		DataExportModule,
 	],
 	controllers: [HealthController],
 	providers: [

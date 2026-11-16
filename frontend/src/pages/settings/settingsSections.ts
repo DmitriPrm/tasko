@@ -1,7 +1,20 @@
 import type { Component } from "vue";
 import { defineAsyncComponent } from "vue";
 
-import { Bell, Board, Clock, Folder, Globe, Lock, Memo, PieChart, Setting, Unlock, User } from "@/shared/ui/icon/icons";
+import {
+	Bell,
+	Board,
+	Clock,
+	Folder,
+	Globe,
+	List,
+	Lock,
+	Memo,
+	PieChart,
+	Setting,
+	Unlock,
+	User,
+} from "@/shared/ui/icon/icons";
 
 export type SettingsGroup = "personal" | "system";
 
@@ -91,5 +104,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 		icon: Globe,
 		permission: "SETTINGS_SYSTEM",
 		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsMail.vue")),
+	},
+	{
+		id: "data",
+		group: "system",
+		icon: List,
+		permission: "SETTINGS_SYSTEM",
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsData.vue")),
 	},
 ];

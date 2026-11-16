@@ -447,6 +447,25 @@ export const en = {
 		},
 	},
 	settings: {
+		data: {
+			exportTitle: "Task export",
+			exportHint:
+				"CSV for Excel: statuses, deadlines, actual duration, whether the deadline was missed and the risk forecast.",
+			allProjects: "All projects",
+			exportTasks: "Download tasks (CSV)",
+			downloaded: "File downloaded",
+			datasetTitle: "ML dataset",
+			datasetHint:
+				"An anonymized export for training and analysis: no names, emails, titles or descriptions. IDs are replaced with aliases so tasks of one assignee stay linked, but the person cannot be identified.",
+			exportDataset: "Download ML dataset (CSV)",
+			auditTitle: "Activity log",
+			auditHint: "Who changed what in tasks and when: statuses, deadlines, assignees, priority.",
+			when: "When",
+			who: "Who",
+			task: "Task",
+			change: "Change",
+			textChanged: "text changed",
+		},
 		registration: {
 			open: "Allow sign-up without an invitation",
 			openHint: "Anyone can create an account on the sign-up page.",
@@ -570,6 +589,10 @@ export const en = {
 			system: "System",
 		},
 		sections: {
+			data: {
+				title: "Data",
+				description: "Task exports, ML dataset and activity log.",
+			},
 			registration: {
 				title: "Registration",
 				description: "Who can sign up on their own and with which role.",

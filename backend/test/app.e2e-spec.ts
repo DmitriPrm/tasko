@@ -304,6 +304,29 @@ describe("TASKO API (e2e)", () => {
 		});
 	});
 
+	describe("Данные: выгрузки и журнал действий", () => {
+		it("администратор выгружает задачи в CSV и обезличенный набор для ML", async () => {
+			const tasks = await api().get("/api/settings/data/tasks.csv").set(as("admin")).expect(200);
+			expect(tasks.headers["content-type"]).toContain("text/csv");
+			expect(tasks.text).toContain("E2E задача");
+
+			const dataset = await api().get("/api/settings/data/ml-dataset.csv").set(as("admin")).expect(200);
+			expect(dataset.text).toContain("duration_hours");
+			// Ни названий задач, ни почты в обезличенном наборе
+			expect(dataset.text).not.toContain("E2E задача");
+			expect(dataset.text).not.toContain("@e2e.local");
+		});
+
+		it("журнал показывает, кто и что менял, и закрыт для не-администраторов", async () => {
+			const audit = await api().get(`/api/settings/data/audit?projectId=${ids.project}`).set(as("admin")).expect(200);
+			expect(audit.body.data.total).toBeGreaterThan(0);
+			expect(audit.body.data.items[0]).toMatchObject({ actor: expect.any(Object), task: expect.any(Object) });
+
+			await api().get("/api/settings/data/audit").set(as("manager")).expect(403);
+			await api().get("/api/settings/data/tasks.csv").set(as("executor")).expect(403);
+		});
+	});
+
 	describe("Заблокированный пользователь теряет доступ", () => {
 		it("сразу, даже с действующим токеном", async () => {
 			await api().patch(`/api/users/${ids.outsider}`).set(as("admin")).send({ isActive: false }).expect(200);
