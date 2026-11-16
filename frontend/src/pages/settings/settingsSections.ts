@@ -1,7 +1,7 @@
 import type { Component } from "vue";
 import { defineAsyncComponent } from "vue";
 
-import { Bell, Clock, Lock, PieChart, Setting, User, Board } from "@/shared/ui/icon/icons";
+import { Bell, Board, Clock, Folder, Globe, Lock, Memo, PieChart, Setting, Unlock, User } from "@/shared/ui/icon/icons";
 
 export type SettingsGroup = "personal" | "system";
 
@@ -63,5 +63,33 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 		icon: PieChart,
 		permission: "SETTINGS_SYSTEM",
 		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsMl.vue")),
+	},
+	{
+		id: "registration",
+		group: "system",
+		icon: Unlock,
+		permission: "SETTINGS_SYSTEM",
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsRegistration.vue")),
+	},
+	{
+		id: "projects",
+		group: "system",
+		icon: Folder,
+		permission: "SETTINGS_SYSTEM",
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsProjects.vue")),
+	},
+	{
+		id: "files",
+		group: "system",
+		icon: Memo,
+		permission: "SETTINGS_SYSTEM",
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsFiles.vue")),
+	},
+	{
+		id: "mail",
+		group: "system",
+		icon: Globe,
+		permission: "SETTINGS_SYSTEM",
+		component: defineAsyncComponent(() => import("@/pages/settings/components/SettingsMail.vue")),
 	},
 ];

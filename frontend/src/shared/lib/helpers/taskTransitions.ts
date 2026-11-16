@@ -15,3 +15,16 @@ export const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 };
 
 export const BOARD_COLUMNS: TaskStatus[] = STATUSES;
+
+/** Строгая схема (включает администратор): та же, что проверяет сервер */
+export const STRICT_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
+	TODO: ["IN_PROGRESS", "CANCELLED"],
+	IN_PROGRESS: ["REVIEW", "TODO", "CANCELLED"],
+	REVIEW: ["DONE", "IN_PROGRESS", "CANCELLED"],
+	DONE: ["IN_PROGRESS"],
+	CANCELLED: ["TODO"],
+};
+
+export function allowedTransitions(from: TaskStatus, strict: boolean) {
+	return (strict ? STRICT_TRANSITIONS : TASK_TRANSITIONS)[from];
+}

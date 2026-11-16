@@ -16,7 +16,7 @@ import type { ProjectMember, Tag, TaskPriority, TaskStatus, User } from "@/share
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { openConfirm } from "@/shared/lib/dialog/openConfirm";
 import { DATE_FIELD_FORMAT, toIsoDate } from "@/shared/lib/helpers/formatDate";
-import { TASK_TRANSITIONS } from "@/shared/lib/helpers/taskTransitions";
+import { allowedTransitions } from "@/shared/lib/helpers/taskTransitions";
 import { priorityLabel, statusLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseDescriptionItem from "@/shared/ui/description/BaseDescriptionItem.vue";
@@ -25,6 +25,7 @@ import BaseDrawer from "@/shared/ui/drawer/BaseDrawer.vue";
 import BaseUserSelect from "@/shared/ui/select/BaseUserSelect.vue";
 import BaseUserName from "@/shared/ui/user/BaseUserName.vue";
 import { useAuthStore } from "@/store/auth";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const emit = defineEmits<{
 	"update:taskId": [value: string | null];
@@ -44,6 +45,7 @@ const visible = computed({
 });
 
 const authStore = useAuthStore();
+const userSettings = useUserSettingsStore();
 
 const priorities: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
@@ -98,7 +100,7 @@ const availableCoAssignees = computed(() => memberUsers.value.filter((user) => u
 const projectTags = computed(() => (tagsState.value || []) as Tag[]);
 const availableTransitions = computed(() => {
 	const status = task.value?.status as TaskStatus | undefined;
-	return status ? TASK_TRANSITIONS[status] : [];
+	return status ? allowedTransitions(status, Boolean(userSettings.system?.projects.strictWorkflow)) : [];
 });
 
 const syncForm = () => {

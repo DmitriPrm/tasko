@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { createGet, createPatch, createPost, createPut } from "@/shared/api/helpers/api";
 import { ZWrapDTO } from "@/shared/api/helpers/ZWrapDTO";
 import {
@@ -48,4 +50,9 @@ export const reloadMlModels = createPost({
 export const recomputeForecasts = createPost({
 	path: "/ml/recompute",
 	type: ZWrapDTO(ZMlRecompute),
+});
+
+export const testMail = createPost({
+	path: "/settings/mail/test",
+	type: ZWrapDTO(z.object({ configured: z.boolean(), sent: z.boolean(), to: z.string() })),
 });

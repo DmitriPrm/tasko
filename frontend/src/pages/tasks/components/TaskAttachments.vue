@@ -6,13 +6,12 @@ import { baseApi } from "@/shared/api/baseApi";
 import { downloadTaskAttachment } from "@/shared/api/v0/attachments/attachments";
 import type { Attachment } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
+import { acceptFor } from "@/shared/lib/helpers/attachmentTypes";
 import { formatDateTime } from "@/shared/lib/helpers/formatDate";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseIconButton from "@/shared/ui/button/BaseIconButton.vue";
 import { Delete, Memo } from "@/shared/ui/icon/icons";
-
-const MAX_BYTES = 10 * 1024 * 1024;
-const ACCEPT = ".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const emit = defineEmits<{
 	changed: [];
@@ -26,6 +25,11 @@ const props = defineProps<{
 }>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
+const userSettings = useUserSettingsStore();
+
+/** Лимит и типы задаёт администратор; пока настройки не загрузились — прежние 10 МБ */
+const maxSizeMb = computed(() => userSettings.system?.attachments.maxSizeMb ?? 10);
+const accept = computed(() => (userSettings.system ? acceptFor(userSettings.system.attachments.allowedTypes) : ""));
 const isUploading = ref(false);
 
 const { state, fetch } = useFetch(baseApi.attachments.getTaskAttachments, "data", {
@@ -50,8 +54,11 @@ const handleFile = async (event: Event) => {
 	const file = input.files?.[0];
 	input.value = "";
 	if (!file) return;
-	if (file.size > MAX_BYTES) {
-		ElMessage({ type: "error", message: translate("task.attachTooBig") });
+	if (file.size > maxSizeMb.value * 1024 * 1024) {
+		ElMessage({
+			type: "error",
+			message: `${translate("task.attachTooBig")} ${maxSizeMb.value} ${translate("settings.files.mb")}`,
+		});
 		return;
 	}
 	isUploading.value = true;
@@ -82,7 +89,7 @@ const handleRemove = async (item: Attachment) => {
 			<base-button text type="primary" :loading="isUploading" @click="handlePick">
 				{{ translate("task.attach") }}
 			</base-button>
-			<input ref="fileInput" class="task-attachments__input" type="file" :accept="ACCEPT" @change="handleFile" />
+			<input ref="fileInput" class="task-attachments__input" type="file" :accept="accept" @change="handleFile" />
 		</base-flex>
 		<ul v-if="items.length" class="task-attachments__list">
 			<li v-for="item in items" :key="item.id">
@@ -108,7 +115,9 @@ const handleRemove = async (item: Attachment) => {
 				</base-icon-button>
 			</li>
 		</ul>
-		<p v-else class="task-attachments__hint">{{ translate("task.attachHint") }}</p>
+		<p v-else class="task-attachments__hint">
+			{{ translate("task.attachHintUpTo") }} {{ maxSizeMb }} {{ translate("settings.files.mb") }}
+		</p>
 	</section>
 </template>
 

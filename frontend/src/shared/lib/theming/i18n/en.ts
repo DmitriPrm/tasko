@@ -4,6 +4,10 @@ export const en = {
 		subtitle: "Project management",
 	},
 	auth: {
+		registrationClosed: "Sign-up is closed",
+		registrationClosedHint:
+			"You can sign up only with a project invitation. Ask an administrator or a project manager for one.",
+		allowedDomains: "Allowed addresses:",
 		title: "Sign in",
 		email: "Email",
 		password: "Password",
@@ -198,6 +202,7 @@ export const en = {
 		},
 	},
 	task: {
+		attachHintUpTo: "Images, PDF, documents, spreadsheets, text, archives — up to",
 		createSubtask: "New subtask",
 		noSubtasks: "No subtasks yet",
 		title: "Tasks",
@@ -248,7 +253,7 @@ export const en = {
 		attachments: "Attachments",
 		attach: "Attach a file",
 		attachHint: "Up to 10 MB: images, PDF, documents, spreadsheets, text, archives",
-		attachTooBig: "The file is larger than 10 MB",
+		attachTooBig: "The file is larger than",
 		download: "Download",
 		removeAttachment: "Remove attachment",
 		addSubtask: "Add a subtask",
@@ -442,6 +447,51 @@ export const en = {
 		},
 	},
 	settings: {
+		registration: {
+			open: "Allow sign-up without an invitation",
+			openHint: "Anyone can create an account on the sign-up page.",
+			closedHint: "Sign-up is possible only with a project invitation.",
+			domains: "Allowed email domains",
+			domainsPlaceholder: "For example company.com — press Enter to add",
+			domainsHint: "Empty means any address. Invited people are not limited.",
+			defaultRole: "Role of new users",
+		},
+		files: {
+			maxSize: "Maximum file size",
+			mb: "MB",
+			types: "Allowed types",
+			noTypes: "Choose at least one type",
+			hint: "Files already uploaded stay. The server never accepts files over 50 MB.",
+			groups: {
+				images: "Images",
+				pdf: "PDF",
+				text: "Text and CSV",
+				documents: "Word documents",
+				spreadsheets: "Excel spreadsheets",
+				presentations: "Presentations",
+				archives: "ZIP archives",
+			},
+		},
+		projects: {
+			defaultView: "Default project view",
+			defaultViewHint: "Users can pick their own view in Workspace settings.",
+			strict: "Strict status transitions",
+			strictOff: "A task can move from any status to any other.",
+			strictOn: "Tasks follow the flow:",
+			strictRules:
+				"A task can go one step back, be cancelled at any step, a done task can be reopened and a cancelled one returned to To do. Disallowed moves on the board are rejected.",
+		},
+		mail: {
+			testTitle: "Mail check",
+			testHint: "We will send a test email to your address to make sure notifications and confirmations arrive.",
+			send: "Send a test email",
+			sent: "Email sent to",
+			failed: "The email could not be sent — check the SMTP settings and the backend log",
+			notConfigured: "Mail is not configured: emails are only written to the backend log",
+			envTitle: "Where it is configured",
+			envHint:
+				"The mail server address and password are set in the backend .env so the password is not stored in the database or shown in the interface. Restart the backend after changing it.",
+		},
 		account: {
 			passwordTitle: "Password",
 			passwordHint: "After changing the password all other devices will be signed out.",
@@ -520,6 +570,22 @@ export const en = {
 			system: "System",
 		},
 		sections: {
+			registration: {
+				title: "Registration",
+				description: "Who can sign up on their own and with which role.",
+			},
+			projects: {
+				title: "Projects",
+				description: "Default task view and status transition rules.",
+			},
+			files: {
+				title: "Files",
+				description: "Size and types of task attachments.",
+			},
+			mail: {
+				title: "Mail",
+				description: "Check that emails are sent.",
+			},
 			account: {
 				title: "Account",
 				description: "Password, active sessions and profile.",
