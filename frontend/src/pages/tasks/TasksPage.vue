@@ -171,4 +171,16 @@ useOnTaskChange({ reload: () => fetch() });
 		font-weight: 600;
 	}
 }
+
+@media (max-width: 640px) {
+	/* Поиск — во всю ширину, «Мои задачи» и «Фильтры» — одной строкой под ним */
+	.tasks-page__left {
+		display: contents !important;
+	}
+
+	.tasks-page__search {
+		max-width: none;
+		flex-basis: 100%;
+	}
+}
 </style>

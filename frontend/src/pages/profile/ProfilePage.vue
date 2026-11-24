@@ -1070,9 +1070,30 @@ watch(
 }
 
 @media (max-width: 560px) {
+	.profile-page__cover {
+		height: 88px;
+	}
+
 	.profile-page__hero-body {
 		flex-direction: column;
 		align-items: flex-start;
+		gap: map.get($spacers, 3);
+		padding: 0 map.get($spacers, 5) map.get($spacers, 5);
+	}
+
+	/* В колонке «flex: 1 1 240px» превращался в высоту 240px — отсюда пустое место под именем */
+	.profile-page__identity {
+		flex: 0 0 auto;
+	}
+
+	/* Аватар наезжает на обложку, как в соцсетях */
+	.profile-page__avatar-wrap {
+		margin-top: -48px;
+	}
+
+	.profile-page__stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: map.get($spacers, 3);
 	}
 
 	.profile-page__deadline {

@@ -166,4 +166,11 @@ const handleOpenCreate = async () => {
 		}
 	}
 }
+
+@media (max-width: 640px) {
+	.projects-page__search {
+		max-width: none;
+		width: 100%;
+	}
+}
 </style>

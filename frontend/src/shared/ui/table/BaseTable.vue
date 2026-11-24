@@ -287,7 +287,7 @@ watch(layoutState, (layout) => {
 						<td class="base-table__empty" :colspan="columns.length">{{ emptyText || translate("common.empty") }}</td>
 					</tr>
 					<tr v-for="row in visibleRows" :key="String(row[rowKey])" @click="() => handleRowClick(row)">
-						<td v-for="column in columns" :key="column.key">
+						<td v-for="column in columns" :key="column.key" :data-label="column.label">
 							<slot :name="column.key" :row="row">{{ row[column.key] ?? "—" }}</slot>
 						</td>
 					</tr>
@@ -491,6 +491,74 @@ watch(layoutState, (layout) => {
 
 	&__size {
 		width: 96px;
+	}
+}
+
+/*
+ * Телефон: строки таблицы превращаются в карточки «подпись — значение» без горизонтальной прокрутки.
+ * Первая колонка (обычно название) — заголовок карточки.
+ */
+@media (max-width: 640px) {
+	.base-table__scroll {
+		overflow: visible;
+	}
+
+	.base-table__grid,
+	.base-table__grid tbody,
+	.base-table__grid tr,
+	.base-table__grid td {
+		display: block;
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	.base-table__grid colgroup,
+	.base-table__grid thead {
+		display: none;
+	}
+
+	.base-table__grid tbody tr {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--mt-color-gray-100);
+	}
+
+	.base-table__grid tbody td {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 3px 0 !important;
+		border: 0 !important;
+		text-align: right;
+		white-space: normal !important;
+	}
+
+	.base-table__grid tbody td::before {
+		content: attr(data-label);
+		flex-shrink: 0;
+		color: var(--mt-color-gray-500);
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-align: left;
+	}
+
+	.base-table__grid tbody td:first-child {
+		margin-bottom: 4px;
+		font-weight: 600;
+		text-align: left;
+	}
+
+	.base-table__grid tbody td:first-child::before,
+	.base-table__grid tbody td.base-table__empty::before {
+		content: none;
+	}
+
+	.base-table__grid tbody td.base-table__empty {
+		justify-content: center;
+	}
+
+	.base-table__pager {
+		justify-content: center;
 	}
 }
 </style>

@@ -7,6 +7,7 @@ import { SETTINGS_SECTIONS, type SettingsGroup } from "@/pages/settings/settings
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import { useAuthStore } from "@/store/auth";
+import { useLayoutStore } from "@/store/layout";
 import { useLocaleStore } from "@/store/locale";
 
 /**
@@ -17,6 +18,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const localeStore = useLocaleStore();
+const layoutStore = useLayoutStore();
 const search = ref("");
 
 const GROUPS: SettingsGroup[] = ["personal", "system"];
@@ -47,11 +49,13 @@ const groups = computed(() =>
 const currentId = computed(() => (typeof route.params.section === "string" ? route.params.section : ""));
 const current = computed(() => available.value.find((item) => item.id === currentId.value));
 
-// Без раздела в адресе или с недоступным разделом — открываем первый доступный
+// На компьютере без раздела в адресе открываем первый доступный.
+// На телефоне — как в настройках iOS и Android: сначала список разделов, потом выбранный раздел отдельно
 watch(
-	[currentId, available],
+	[currentId, available, () => layoutStore.isMobile],
 	() => {
 		if (route.name !== "settings") return;
+		if (layoutStore.isMobile && !currentId.value) return;
 		if (!current.value && available.value.length) {
 			router.replace({ name: "settings", params: { section: available.value[0].id } });
 		}
@@ -60,12 +64,16 @@ watch(
 );
 
 const handleOpen = (id: string) => router.push({ name: "settings", params: { section: id } });
+const handleBackToList = () => router.push({ name: "settings" });
+
+const showNav = computed(() => !layoutStore.isMobile || !current.value);
+const showContent = computed(() => Boolean(current.value) && (!layoutStore.isMobile || Boolean(currentId.value)));
 </script>
 
 <template>
 	<base-page class="settings-page" :title="translate('settings.title')">
 		<div class="settings-page__layout">
-			<nav class="settings-page__nav" :aria-label="translate('settings.title')">
+			<nav v-if="showNav" class="settings-page__nav" :aria-label="translate('settings.title')">
 				<el-input
 					v-model="search"
 					class="settings-page__search"
@@ -91,7 +99,10 @@ const handleOpen = (id: string) => router.push({ name: "settings", params: { sec
 				</section>
 			</nav>
 
-			<main v-if="current" class="settings-page__content">
+			<main v-if="showContent && current" class="settings-page__content">
+				<button v-if="layoutStore.isMobile" type="button" class="settings-page__back" @click="handleBackToList">
+					← {{ translate("settings.allSettings") }}
+				</button>
 				<header class="settings-page__header">
 					<h2>{{ current.title }}</h2>
 					<p>{{ current.description }}</p>
@@ -180,6 +191,18 @@ const handleOpen = (id: string) => router.push({ name: "settings", params: { sec
 		flex-direction: column;
 		gap: map.get($spacers, 5);
 		min-width: 0;
+	}
+
+	&__back {
+		align-self: flex-start;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--mt-color-primary);
+		font: inherit;
+		font-size: map.get($font-sizes, 7);
+		font-weight: 600;
+		cursor: pointer;
 	}
 
 	&__header {

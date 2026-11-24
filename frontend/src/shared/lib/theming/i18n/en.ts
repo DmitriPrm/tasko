@@ -447,6 +447,7 @@ export const en = {
 		},
 	},
 	settings: {
+		allSettings: "All settings",
 		data: {
 			exportTitle: "Task export",
 			exportHint:

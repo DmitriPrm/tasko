@@ -91,4 +91,25 @@ const handleOpen = (taskId: string) => {
 		font-size: map.get($font-sizes, 8);
 	}
 }
+
+/* Телефон: название во всю ширину, срок и метки — строкой ниже */
+@media (max-width: 640px) {
+	.dashboard-task-list {
+		padding: map.get($spacers, 4);
+	}
+
+	/* base-flex задаёт раскладку inline-стилем, поэтому нужен !important */
+	.dashboard-task-list__item > .base-flex {
+		flex-wrap: wrap !important;
+		row-gap: map.get($spacers, 1) !important;
+	}
+
+	.dashboard-task-list__title {
+		flex-basis: 100%;
+	}
+
+	.dashboard-task-list__meta {
+		gap: map.get($spacers, 3) !important;
+	}
+}
 </style>

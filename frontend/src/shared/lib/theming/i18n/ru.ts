@@ -447,6 +447,7 @@ export const ru = {
 		},
 	},
 	settings: {
+		allSettings: "Все настройки",
 		data: {
 			exportTitle: "Выгрузка задач",
 			exportHint: "CSV для Excel: статусы, сроки, фактическая длительность, сорван ли срок и прогноз риска.",

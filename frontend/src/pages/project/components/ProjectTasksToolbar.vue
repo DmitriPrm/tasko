@@ -150,4 +150,26 @@ const handleSort = (value: TasksSort) => emit("update:sort", value);
 		}
 	}
 }
+
+@media (max-width: 640px) {
+	/* Поиск — отдельной строкой, фильтры, сортировка и вид — строкой ниже */
+	.project-tasks-toolbar__left {
+		display: contents !important;
+	}
+
+	.project-tasks-toolbar__search {
+		flex-basis: 100%;
+		max-width: none;
+	}
+
+	.project-tasks-toolbar__sort-label {
+		display: none;
+	}
+
+	.project-tasks-toolbar__sort {
+		flex: 1;
+		width: auto;
+		min-width: 0;
+	}
+}
 </style>

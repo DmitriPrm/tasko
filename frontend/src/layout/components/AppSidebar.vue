@@ -196,11 +196,18 @@ $collapsed: 76px;
 		width: min(320px, 86vw);
 		height: 100dvh;
 		transform: translateX(-100%);
-		box-shadow: var(--mt-shadow-pop);
+		/* Закрытое меню не отбрасывает тень на край страницы и недоступно с клавиатуры */
+		visibility: hidden;
+		transition:
+			transform 0.25s var(--mt-ease),
+			visibility 0s linear 0.25s;
 	}
 
 	&--open {
 		transform: translateX(0);
+		visibility: visible;
+		box-shadow: var(--mt-shadow-pop);
+		transition: transform 0.25s var(--mt-ease);
 	}
 
 	&__top {
