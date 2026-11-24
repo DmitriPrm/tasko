@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -20,5 +20,20 @@ export class CommentsController {
 	@Post()
 	create(@CurrentUser() user: AuthUser, @Param("id") taskId: string, @Body() dto: CreateCommentDto) {
 		return this.commentsService.create(user, taskId, dto);
+	}
+
+	@Patch(":commentId")
+	update(
+		@CurrentUser() user: AuthUser,
+		@Param("id") taskId: string,
+		@Param("commentId") commentId: string,
+		@Body() dto: CreateCommentDto,
+	) {
+		return this.commentsService.update(user, taskId, commentId, dto);
+	}
+
+	@Delete(":commentId")
+	remove(@CurrentUser() user: AuthUser, @Param("id") taskId: string, @Param("commentId") commentId: string) {
+		return this.commentsService.remove(user, taskId, commentId);
 	}
 }

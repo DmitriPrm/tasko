@@ -7,6 +7,7 @@ import { Public } from "../common/decorators/public.decorator";
 import { AuthService } from "./auth.service";
 import { AuthUser } from "./auth.types";
 import { ChangePasswordDto } from "./dto/change-password.dto";
+import { ForgotPasswordDto, ResetPasswordDto } from "./dto/password-reset.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { RegisterDto } from "./dto/register.dto";
@@ -43,6 +44,20 @@ export class AuthController {
 	@Post("login")
 	login(@Body() dto: LoginDto) {
 		return this.authService.login(dto);
+	}
+
+	@Public()
+	@Throttle({ default: { limit: 5, ttl: 60_000 } })
+	@Post("forgot-password")
+	forgotPassword(@Body() dto: ForgotPasswordDto) {
+		return this.authService.requestPasswordReset(dto.email);
+	}
+
+	@Public()
+	@Throttle({ default: { limit: 10, ttl: 60_000 } })
+	@Post("reset-password")
+	resetPassword(@Body() dto: ResetPasswordDto) {
+		return this.authService.resetPassword(dto.token, dto.newPassword);
 	}
 
 	@Public()

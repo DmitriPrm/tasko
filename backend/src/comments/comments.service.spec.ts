@@ -14,6 +14,9 @@ describe("CommentsService", () => {
 		comment: {
 			findMany: jest.fn(),
 			create: jest.fn(),
+			findUnique: jest.fn(),
+			update: jest.fn(),
+			delete: jest.fn(),
 		},
 	};
 	const projectAccess = {
@@ -96,5 +99,49 @@ describe("CommentsService", () => {
 
 		expect(projectAccess.assertCanView).toHaveBeenCalledWith("p1", user);
 		expect(prisma.comment.findMany).toHaveBeenCalled();
+	});
+
+	describe("editing and deleting", () => {
+		const own = { id: "c1", taskId: "t1", authorId: "u1", body: "Текст", createdAt: new Date(), updatedAt: new Date() };
+		const foreign = { ...own, id: "c2", authorId: "u2" };
+		const project = (role: "MANAGER" | "MEMBER") => ({ members: [{ userId: "u1", projectRole: role }] });
+		const executor = { ...user, systemRole: SystemRole.EXECUTOR };
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			prisma.task.findUnique.mockResolvedValue({ id: "t1", projectId: "p1" });
+			prisma.comment.update.mockImplementation(async ({ data }) => ({ ...own, ...data, author }));
+		});
+
+		it("lets the author fix the text", async () => {
+			projectAccess.assertCanView.mockResolvedValue(project("MEMBER"));
+			prisma.comment.findUnique.mockResolvedValue(own);
+			await expect(service.update(executor, "t1", "c1", { body: "Исправлено" })).resolves.toMatchObject({
+				body: "Исправлено",
+				canEdit: true,
+			});
+		});
+
+		it("does not let anyone else edit, even a project manager", async () => {
+			projectAccess.assertCanView.mockResolvedValue(project("MANAGER"));
+			prisma.comment.findUnique.mockResolvedValue(foreign);
+			await expect(service.update(user, "t1", "c2", { body: "Чужое" })).rejects.toThrow("только его автор");
+		});
+
+		it("lets a project manager delete someone else's comment, but not a regular member", async () => {
+			prisma.comment.findUnique.mockResolvedValue(foreign);
+
+			projectAccess.assertCanView.mockResolvedValue(project("MEMBER"));
+			await expect(service.remove(executor, "t1", "c2")).rejects.toThrow("автор или руководитель");
+
+			projectAccess.assertCanView.mockResolvedValue(project("MANAGER"));
+			await expect(service.remove(executor, "t1", "c2")).resolves.toEqual({ success: true });
+		});
+
+		it("does not touch a comment from another task", async () => {
+			projectAccess.assertCanView.mockResolvedValue(project("MANAGER"));
+			prisma.comment.findUnique.mockResolvedValue({ ...own, taskId: "other" });
+			await expect(service.remove(user, "t1", "c1")).rejects.toThrow("Комментарий не найден");
+		});
 	});
 });

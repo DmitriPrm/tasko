@@ -223,6 +223,10 @@ export const ZComment = z.object({
 	body: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
+	/** Текст исправлен после публикации */
+	edited: z.boolean().optional(),
+	canEdit: z.boolean().optional(),
+	canDelete: z.boolean().optional(),
 	author: ZUser,
 });
 
@@ -477,6 +481,7 @@ export type TaskForecast = z.infer<typeof ZTaskForecast>;
 export type TaskPrediction = z.infer<typeof ZTaskPrediction>;
 export type ProjectColumn = z.infer<typeof ZProjectColumn>;
 export type Comment = z.infer<typeof ZComment>;
+export type TaskComment = Comment;
 export type Invitation = z.infer<typeof ZInvitation>;
 export type InvitationPreview = z.infer<typeof ZInvitationPreview>;
 export type InvitationCreated = z.infer<typeof ZInvitationCreated>;

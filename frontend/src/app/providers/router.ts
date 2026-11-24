@@ -19,6 +19,19 @@ export const router = createRouter({
 			meta: { public: true },
 		},
 		{
+			path: "/forgot-password",
+			name: "forgot-password",
+			component: () => import("@/pages/auth/ForgotPasswordPage.vue"),
+			meta: { public: true },
+		},
+		{
+			// open: ссылка из письма работает и в браузере, где кто-то уже вошёл
+			path: "/reset-password/:token",
+			name: "reset-password",
+			component: () => import("@/pages/auth/ResetPasswordPage.vue"),
+			meta: { open: true },
+		},
+		{
 			path: "/verify-email/:token",
 			name: "verify-email",
 			component: () => import("@/pages/auth/VerifyEmailPage.vue"),

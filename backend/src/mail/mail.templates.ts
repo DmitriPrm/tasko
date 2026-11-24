@@ -76,3 +76,21 @@ export function invitationMail(inviterName: string, projectName: string, url: st
 		}),
 	};
 }
+
+export function passwordResetMail(fullName: string, url: string, minutesValid: number) {
+	const name = escapeHtml(fullName);
+	return {
+		subject: "Сброс пароля в TASKO",
+		text: `Здравствуйте, ${fullName}! Чтобы задать новый пароль, перейдите по ссылке: ${url}\nСсылка действует ${minutesValid} минут. Если вы не просили сбросить пароль, просто проигнорируйте письмо — пароль не изменится.`,
+		html: layout({
+			title: "Сброс пароля",
+			paragraphs: [
+				`Здравствуйте, ${name}!`,
+				"Кто-то (возможно, вы) попросил сбросить пароль от TASKO. Нажмите кнопку и задайте новый пароль.",
+			],
+			buttonLabel: "Задать новый пароль",
+			url,
+			footer: `Ссылка действует ${minutesValid} минут и работает один раз. Если вы не просили сброс, проигнорируйте письмо — пароль не изменится.`,
+		}),
+	};
+}

@@ -45,3 +45,15 @@ export const logoutAll = createPost({
 	path: "/auth/logout-all",
 	type: ZWrapDTO(ZTokens),
 });
+
+/** «Забыли пароль?»: ответ одинаковый для любого адреса */
+export const forgotPassword = createPost({
+	path: "/auth/forgot-password",
+	type: ZWrapDTO(ZSuccess),
+});
+
+/** Новый пароль по ссылке из письма */
+export const resetPassword = createPost({
+	path: "/auth/reset-password",
+	type: ZWrapDTO(ZSuccess),
+});

@@ -48,6 +48,9 @@ const handleSubmit = async () => {
 			<el-form-item :label="translate('auth.password')">
 				<el-input v-model="form.password" type="password" show-password size="large" autocomplete="current-password" />
 			</el-form-item>
+			<router-link class="sign-in__forgot" :to="{ name: 'forgot-password' }">{{
+				translate("auth.forgotLink")
+			}}</router-link>
 			<base-button class="auth-shell__submit" type="primary" native-type="submit" :loading="isSubmitting">
 				{{ translate("auth.submit") }}
 			</base-button>
@@ -58,3 +61,14 @@ const handleSubmit = async () => {
 		</p>
 	</auth-shell>
 </template>
+
+<style scoped lang="scss">
+.sign-in__forgot {
+	display: inline-block;
+	margin: -8px 0 16px;
+	color: var(--mt-color-primary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+</style>

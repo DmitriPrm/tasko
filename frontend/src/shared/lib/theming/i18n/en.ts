@@ -4,6 +4,19 @@ export const en = {
 		subtitle: "Project management",
 	},
 	auth: {
+		forgotLink: "Forgot password?",
+		forgotEyebrow: "Account recovery",
+		forgotTitle: "Reset password",
+		forgotHint: "Enter the email you sign in with. We will send you a link to set a new password.",
+		forgotSubmit: "Send the link",
+		forgotSent:
+			"If this address is registered, an email with the link is on its way. The link is valid for an hour. Not there? Check your spam folder.",
+		backToLogin: "Back to sign in",
+		resetTitle: "New password",
+		resetSubmit: "Save password",
+		resetDone: "Password changed. Sign in with the new password — other devices have been signed out.",
+		resetInvalid: "The link is invalid or expired: it works for an hour and only once.",
+		resetAgain: "Request a new link",
 		registrationClosed: "Sign-up is closed",
 		registrationClosedHint:
 			"You can sign up only with a project invitation. Ask an administrator or a project manager for one.",
@@ -202,6 +215,13 @@ export const en = {
 		},
 	},
 	task: {
+		commentEdited: "edited",
+		editComment: "Edit comment",
+		deleteComment: "Delete comment",
+		deleteCommentText: "The comment will disappear for all members.",
+		deleteCommentForeign:
+			"This is someone else's comment: it will disappear for all members and the author cannot restore it.",
+		commentEditHint: "Ctrl+Enter to save, Esc to cancel",
 		attachHintUpTo: "Images, PDF, documents, spreadsheets, text, archives — up to",
 		createSubtask: "New subtask",
 		noSubtasks: "No subtasks yet",

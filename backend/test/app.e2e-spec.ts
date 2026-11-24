@@ -327,6 +327,63 @@ describe("TASKO API (e2e)", () => {
 		});
 	});
 
+	describe("Восстановление пароля", () => {
+		it("ответ одинаковый для любого адреса, письмо — только существующему", async () => {
+			await api().post("/api/auth/forgot-password").send({ email: "nobody@e2e.local" }).expect(201);
+			await api().post("/api/auth/forgot-password").send({ email: "admin@e2e.local" }).expect(201);
+			expect(await prisma.passwordResetToken.count({ where: { userId: ids.admin } })).toBe(1);
+			expect(await prisma.passwordResetToken.count()).toBe(1);
+		});
+
+		it("ссылка одноразовая, после сброса старые сессии завершаются", async () => {
+			// Ссылка уходит письмом; в тесте создаём её сами тем же способом, что и сервер
+			const { generateToken } = await import("../src/common/security/tokens");
+			const { token, hash } = generateToken();
+			await prisma.passwordResetToken.create({
+				data: { userId: ids.admin, tokenHash: hash, expiresAt: new Date(Date.now() + 60_000) },
+			});
+
+			await api().post("/api/auth/reset-password").send({ token, newPassword: "ResetPass1" }).expect(201);
+			await api().get("/api/auth/me").set(as("admin")).expect(401);
+			await api().post("/api/auth/reset-password").send({ token, newPassword: "ResetPass2" }).expect(400);
+
+			const login = await api()
+				.post("/api/auth/login")
+				.send({ email: "admin@e2e.local", password: "ResetPass1" })
+				.expect(201);
+			tokens.admin = login.body.data.accessToken;
+		});
+	});
+
+	describe("Комментарии: правка и удаление", () => {
+		it("автор правит свой комментарий, чужой — нет; руководитель удаляет", async () => {
+			const created = await api()
+				.post(`/api/tasks/${ids.task}/comments`)
+				.set(as("executor"))
+				.send({ body: "Опечатка" })
+				.expect(201);
+			const commentId = created.body.data.id;
+			expect(created.body.data).toMatchObject({ canEdit: true, canDelete: true, edited: false });
+
+			const edited = await api()
+				.patch(`/api/tasks/${ids.task}/comments/${commentId}`)
+				.set(as("executor"))
+				.send({ body: "Исправлено" })
+				.expect(200);
+			expect(edited.body.data.body).toBe("Исправлено");
+
+			await api()
+				.patch(`/api/tasks/${ids.task}/comments/${commentId}`)
+				.set(as("manager"))
+				.send({ body: "Чужая правка" })
+				.expect(403);
+			await api().delete(`/api/tasks/${ids.task}/comments/${commentId}`).set(as("manager")).expect(200);
+
+			const list = await api().get(`/api/tasks/${ids.task}/comments`).set(as("manager")).expect(200);
+			expect(list.body.data.map((item: { id: string }) => item.id)).not.toContain(commentId);
+		});
+	});
+
 	describe("Заблокированный пользователь теряет доступ", () => {
 		it("сразу, даже с действующим токеном", async () => {
 			await api().patch(`/api/users/${ids.outsider}`).set(as("admin")).send({ isActive: false }).expect(200);

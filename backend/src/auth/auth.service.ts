@@ -15,7 +15,7 @@ import { saveGeneratedAvatar } from "../common/avatar/files";
 import { generateToken, hashToken } from "../common/security/tokens";
 import { InvitationsService } from "../invitations/invitations.service";
 import { MailService } from "../mail/mail.service";
-import { verifyEmailMail } from "../mail/mail.templates";
+import { passwordResetMail, verifyEmailMail } from "../mail/mail.templates";
 import { PrismaService } from "../prisma/prisma.service";
 import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { toUserDto } from "../users/user.mapper";
@@ -24,6 +24,9 @@ import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 
 const VERIFICATION_TTL_HOURS = 24;
+
+/** Сколько живёт ссылка для сброса пароля */
+const RESET_TTL_MINUTES = 60;
 
 @Injectable()
 export class AuthService {
@@ -135,6 +138,53 @@ export class AuthService {
 			this.prisma.emailVerificationToken.deleteMany({ where: { userId: record.userId } }),
 		]);
 
+		return { success: true };
+	}
+
+	/**
+	 * «Забыли пароль?»: ответ одинаковый, есть такой адрес или нет — по нему нельзя узнать,
+	 * кто зарегистрирован. Письмо уходит только активному пользователю.
+	 */
+	async requestPasswordReset(rawEmail: string) {
+		const email = rawEmail.trim().toLowerCase();
+		const user = await this.prisma.user.findUnique({ where: { email } });
+		if (user?.isActive) {
+			const { token, hash } = generateToken();
+			await this.prisma.$transaction([
+				this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+				this.prisma.passwordResetToken.create({
+					data: { userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000) },
+				}),
+			]);
+			const frontendUrl = (this.configService.get<string>("FRONTEND_URL") || "http://localhost:5173").replace(
+				/\/$/,
+				"",
+			);
+			await this.mail.send({
+				to: user.email,
+				...passwordResetMail(user.fullName, `${frontendUrl}/reset-password/${token}`, RESET_TTL_MINUTES),
+			});
+		}
+		return { success: true };
+	}
+
+	/** Новый пароль по ссылке из письма: ссылка одноразовая, все старые сессии завершаются */
+	async resetPassword(token: string, newPassword: string) {
+		const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) } });
+		if (!record || record.expiresAt < new Date()) {
+			throw new BadRequestException("Ссылка недействительна или устарела. Запросите сброс пароля ещё раз");
+		}
+		const user = await this.prisma.user.findUnique({ where: { id: record.userId } });
+		if (!user || !user.isActive) {
+			throw new BadRequestException("Ссылка недействительна или устарела. Запросите сброс пароля ещё раз");
+		}
+		await this.prisma.$transaction([
+			this.prisma.user.update({
+				where: { id: user.id },
+				data: { passwordHash: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
+			}),
+			this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+		]);
 		return { success: true };
 	}
 
