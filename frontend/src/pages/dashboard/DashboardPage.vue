@@ -28,6 +28,7 @@ const summaryCards = computed(() => [
 const projects = computed(() => state.value?.projects ?? []);
 const myTasks = computed(() => state.value?.myTasks ?? []);
 const upcoming = computed(() => state.value?.upcomingDeadlines ?? []);
+const risky = computed(() => state.value?.riskyTasks ?? []);
 
 const handleOpenProject = (projectId: string) => {
 	router.push({ name: "project", params: { id: projectId } });
@@ -40,24 +41,24 @@ useOnTaskChange({ reload: () => fetch() });
 	<base-page :title="translate('dashboard.title')">
 		<el-skeleton :loading="isLoading && !state" animated>
 			<base-flex direction="column" :gap="6">
-				<base-flex :gap="4" wrap="wrap">
+				<base-flex class="dashboard-page__summaries" :gap="4" wrap="wrap">
 					<base-card
-											v-for="card in summaryCards"
-											:key="card.key"
-											class="dashboard-page__summary"
-											:class="`dashboard-page__summary--${card.key}`"
-										>
-											<el-icon class="dashboard-page__summary-icon" :size="20" aria-hidden="true">
-												<component :is="card.icon" />
-											</el-icon>
-											<span>{{ card.label }}</span>
-											<strong>{{ card.value }}</strong>
-										</base-card>
+						v-for="card in summaryCards"
+						:key="card.key"
+						class="dashboard-page__summary"
+						:class="`dashboard-page__summary--${card.key}`"
+					>
+						<el-icon class="dashboard-page__summary-icon" :size="20" aria-hidden="true">
+							<component :is="card.icon" />
+						</el-icon>
+						<span>{{ card.label }}</span>
+						<strong>{{ card.value }}</strong>
+					</base-card>
 				</base-flex>
 				<section class="dashboard-page__section">
 					<h3>{{ translate("dashboard.projects") }}</h3>
 					<p v-if="!projects.length" class="dashboard-page__empty">{{ translate("common.empty") }}</p>
-					<base-flex v-else :gap="4" wrap="wrap">
+					<base-flex v-else class="dashboard-page__projects" :gap="4" wrap="wrap">
 						<base-card
 							v-for="project in projects"
 							:key="project.id"
@@ -68,10 +69,7 @@ useOnTaskChange({ reload: () => fetch() });
 							<base-flex direction="column" :gap="2">
 								<strong>{{ project.name }}</strong>
 								<base-flex class="dashboard-page__status" align="center" :gap="2">
-									<span
-										class="dashboard-page__dot"
-										:style="{ background: projectStatusDot[project.status] }"
-									/>
+									<span class="dashboard-page__dot" :style="{ background: projectStatusDot[project.status] }" />
 									<span>{{ projectStatusLabel(project.status) }}</span>
 								</base-flex>
 								<base-flex class="dashboard-page__count" align="center" :gap="2">
@@ -86,6 +84,7 @@ useOnTaskChange({ reload: () => fetch() });
 				<base-flex :gap="6" wrap="wrap">
 					<dashboard-task-list :title="translate('task.my')" :tasks="myTasks" />
 					<dashboard-task-list :title="translate('task.upcoming')" :tasks="upcoming" deadlines />
+					<dashboard-task-list :title="translate('forecast.highRiskBadge')" :tasks="risky" risk />
 				</base-flex>
 			</base-flex>
 		</el-skeleton>
@@ -179,6 +178,50 @@ useOnTaskChange({ reload: () => fetch() });
 		margin: 0;
 		color: var(--mt-color-gray-400);
 		font-size: map.get($font-sizes, 6);
+	}
+}
+
+@media (max-width: 640px) {
+	/* Три показателя в один компактный ряд */
+	.dashboard-page__summaries {
+		flex-wrap: nowrap !important;
+		gap: map.get($spacers, 2) !important;
+	}
+
+	.dashboard-page__summary {
+		min-width: 0;
+		flex: 1 1 0;
+		padding: map.get($spacers, 3);
+
+		span {
+			font-size: map.get($font-sizes, 8);
+			line-height: 1.25;
+		}
+
+		strong {
+			font-size: map.get($font-sizes, 3);
+		}
+	}
+
+	.dashboard-page__summary-icon {
+		width: 28px;
+		height: 28px;
+		margin-bottom: map.get($spacers, 2);
+		border-radius: 8px;
+	}
+
+	/* Проекты листаются пальцем вбок, как доски в Trello */
+	.dashboard-page__projects {
+		flex-wrap: nowrap !important;
+		padding-bottom: map.get($spacers, 2);
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+	}
+
+	.dashboard-page__project {
+		flex: 0 0 220px;
+		scroll-snap-align: start;
 	}
 }
 </style>

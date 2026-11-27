@@ -5,10 +5,12 @@ import { useRoute, useRouter } from "vue-router";
 import AuthShell from "@/pages/auth/components/AuthShell.vue";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import { useAuthStore } from "@/store/auth";
+import { useUserSettingsStore } from "@/store/userSettings";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const userSettings = useUserSettingsStore();
 const isSubmitting = ref(false);
 const form = reactive({
 	email: import.meta.env.DEV ? "manager@tasko.local" : "",
@@ -26,7 +28,9 @@ const handleSubmit = async () => {
 	isSubmitting.value = true;
 	try {
 		await authStore.login({ email: form.email.trim(), password: form.password });
-		await router.push(redirectTarget());
+		const target = redirectTarget();
+		const startPage = userSettings.preferences?.startPage;
+		await router.push(target === "/" && startPage ? { name: startPage } : target);
 	} catch {
 		// Сообщение об ошибке показывает перехватчик API
 	} finally {
@@ -42,14 +46,11 @@ const handleSubmit = async () => {
 				<el-input v-model="form.email" size="large" autocomplete="username" />
 			</el-form-item>
 			<el-form-item :label="translate('auth.password')">
-				<el-input
-					v-model="form.password"
-					type="password"
-					show-password
-					size="large"
-					autocomplete="current-password"
-				/>
+				<el-input v-model="form.password" type="password" show-password size="large" autocomplete="current-password" />
 			</el-form-item>
+			<router-link class="sign-in__forgot" :to="{ name: 'forgot-password' }">{{
+				translate("auth.forgotLink")
+			}}</router-link>
 			<base-button class="auth-shell__submit" type="primary" native-type="submit" :loading="isSubmitting">
 				{{ translate("auth.submit") }}
 			</base-button>
@@ -60,3 +61,14 @@ const handleSubmit = async () => {
 		</p>
 	</auth-shell>
 </template>
+
+<style scoped lang="scss">
+.sign-in__forgot {
+	display: inline-block;
+	margin: -8px 0 16px;
+	color: var(--mt-color-primary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+</style>

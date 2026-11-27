@@ -35,10 +35,7 @@ const c = (cx: number, cy: number, r: number, extra: Record<string, string | num
 	"circle",
 	{ cx, cy, r, ...extra },
 ];
-const r = (x: number, y: number, width: number, height: number, rx = 2): Shape => [
-	"rect",
-	{ x, y, width, height, rx },
-];
+const r = (x: number, y: number, width: number, height: number, rx = 2): Shape => ["rect", { x, y, width, height, rx }];
 
 const STAR = "M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.2l-5.6 3 1.1-6.2L3 9.6l6.2-.9z";
 const USER_BODY = "M4 21c0-4 3.6-7 8-7s8 3 8 7";
@@ -57,17 +54,24 @@ export const List = createIcon("List", [
 	p("M3.5 12h.01"),
 	p("M3.5 18h.01"),
 ]);
-export const Board = createIcon("Board", [r(3, 4, 18, 16, 3), p("M9 4v16"), p("M15 4v16"), p("M6 8h.01"), p("M12 8h.01")]);
+export const Board = createIcon("Board", [
+	r(3, 4, 18, 16, 3),
+	p("M9 4v16"),
+	p("M15 4v16"),
+	p("M6 8h.01"),
+	p("M12 8h.01"),
+]);
 export const Grid = createIcon("Grid", [r(3, 3, 7, 9, 2), r(14, 3, 7, 5, 2), r(14, 12, 7, 9, 2), r(3, 16, 7, 5, 2)]);
 export const PieChart = createIcon("PieChart", [p("M21 12a9 9 0 1 1-9-9v9z"), p("M15.5 3.4A9 9 0 0 1 20.6 8.5H15.5z")]);
 export const Folder = createIcon("Folder", [
 	p("M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"),
 ]);
 export const CircleCheck = createIcon("CircleCheck", [c(12, 12, 9), p("M8 12.5l3 3 5-6")]);
-export const CircleCheckFilled = createIcon("CircleCheckFilled", [
-	c(12, 12, 10),
-	["path", { d: "M7.8 12.5l3 3 5.4-6.2", stroke: "#fff", "stroke-width": 2, fill: "none" }],
-], true);
+export const CircleCheckFilled = createIcon(
+	"CircleCheckFilled",
+	[c(12, 12, 10), ["path", { d: "M7.8 12.5l3 3 5.4-6.2", stroke: "#fff", "stroke-width": 2, fill: "none" }]],
+	true,
+);
 export const Setting = createIcon("Setting", [
 	p("M4 7h10"),
 	p("M18 7h2"),
@@ -77,7 +81,11 @@ export const Setting = createIcon("Setting", [
 	c(8, 17, 2),
 ]);
 export const User = createIcon("User", [c(12, 8, 4), p(USER_BODY)]);
-export const UserFilled = createIcon("UserFilled", [c(12, 8, 4.5), p("M3.5 21c0-4.2 3.8-7 8.5-7s8.5 2.8 8.5 7z")], true);
+export const UserFilled = createIcon(
+	"UserFilled",
+	[c(12, 8, 4.5), p("M3.5 21c0-4.2 3.8-7 8.5-7s8.5 2.8 8.5 7z")],
+	true,
+);
 export const Star = createIcon("Star", [p(STAR)]);
 export const StarFilled = createIcon("StarFilled", [p(STAR)], true);
 export const Bell = createIcon("Bell", [p("M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"), p("M10.3 21a2 2 0 0 0 3.4 0")]);
@@ -106,6 +114,33 @@ export const Memo = createIcon("Memo", [
 	p("M9 13h6"),
 	p("M9 17h4"),
 ]);
+export const InfoFilled = createIcon("InfoFilled", [c(12, 12, 9), p("M12 11v5"), p("M12 8h.01")]);
+/** Медаль на ленте — иконка достижений и иконка раздела профиля по умолчанию */
+export const Award = createIcon("Award", [
+	c(12, 9, 6),
+	p("M8.2 13.6L7 21.5l5-2.8 5 2.8-1.2-7.9"),
+	p("M12 6.4l.85 1.75 1.95.28-1.4 1.37.33 1.93L12 10.82l-1.73.91.33-1.93-1.4-1.37 1.95-.28z"),
+]);
+export const Briefcase = createIcon("Briefcase", [
+	r(3, 7, 18, 13, 2),
+	p("M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"),
+	p("M3 12.5h18"),
+]);
+export const Book = createIcon("Book", [
+	p("M4 19.5A2.5 2.5 0 0 1 6.5 17H20"),
+	p("M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"),
+]);
+export const Code = createIcon("Code", [p("M16 18l6-6-6-6"), p("M8 6l-6 6 6 6")]);
+export const Phone = createIcon("Phone", [
+	p(
+		"M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z",
+	),
+]);
+export const Globe = createIcon("Globe", [c(12, 12, 9), p("M3 12h18"), p("M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z")]);
+export const Heart = createIcon("Heart", [
+	p("M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"),
+]);
+export const Flag = createIcon("Flag", [p("M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"), p("M4 22v-7")]);
 export const Warning = createIcon("Warning", [
 	p("M10.3 3.9L2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"),
 	p("M12 9v4"),

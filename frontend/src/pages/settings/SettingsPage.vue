@@ -1,55 +1,115 @@
 <script lang="ts" setup>
 import { Search } from "@/shared/ui/icon/icons";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-import SettingsCategoryCard from "@/pages/settings/components/SettingsCategoryCard.vue";
-import { SETTINGS_CATEGORIES } from "@/pages/settings/settingsCategories";
+import { SETTINGS_SECTIONS, type SettingsGroup } from "@/pages/settings/settingsSections";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import { useAuthStore } from "@/store/auth";
+import { useLayoutStore } from "@/store/layout";
 import { useLocaleStore } from "@/store/locale";
 
+/**
+ * Настройки в духе Jira, Asana и Linear: слева меню из двух групп («Личные» и «Система»),
+ * справа выбранный раздел. У каждого раздела свой адрес: /settings/<раздел>.
+ */
+const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const localeStore = useLocaleStore();
+const layoutStore = useLayoutStore();
 const search = ref("");
 
-const categories = computed(() => {
-	localeStore.locale;
-	const query = search.value.trim().toLowerCase();
-	return SETTINGS_CATEGORIES.filter((item) => authStore.hasPermission(item.permission))
-		.filter((item) => !query || item.names.some((name) => name.toLowerCase().includes(query)))
-		.map((item) => ({
+const GROUPS: SettingsGroup[] = ["personal", "system"];
+
+const available = computed(() => {
+	void localeStore.locale; // пересчитать подписи при смене языка
+	return SETTINGS_SECTIONS.filter((item) => !item.permission || authStore.hasPermission(item.permission)).map(
+		(item) => ({
 			...item,
-			title: translate(item.titleKey),
-		}));
+			title: translate(`settings.sections.${item.id}.title`),
+			description: translate(`settings.sections.${item.id}.description`),
+		}),
+	);
 });
 
-const handleSearch = (value: string) => {
-	search.value = value;
-};
+const visible = computed(() => {
+	const query = search.value.trim().toLowerCase();
+	if (!query) return available.value;
+	return available.value.filter((item) => `${item.title} ${item.description}`.toLowerCase().includes(query));
+});
+
+const groups = computed(() =>
+	GROUPS.map((group) => ({ group, items: visible.value.filter((item) => item.group === group) })).filter(
+		(entry) => entry.items.length,
+	),
+);
+
+const currentId = computed(() => (typeof route.params.section === "string" ? route.params.section : ""));
+const current = computed(() => available.value.find((item) => item.id === currentId.value));
+
+// На компьютере без раздела в адресе открываем первый доступный.
+// На телефоне — как в настройках iOS и Android: сначала список разделов, потом выбранный раздел отдельно
+watch(
+	[currentId, available, () => layoutStore.isMobile],
+	() => {
+		if (route.name !== "settings") return;
+		if (layoutStore.isMobile && !currentId.value) return;
+		if (!current.value && available.value.length) {
+			router.replace({ name: "settings", params: { section: available.value[0].id } });
+		}
+	},
+	{ immediate: true },
+);
+
+const handleOpen = (id: string) => router.push({ name: "settings", params: { section: id } });
+const handleBackToList = () => router.push({ name: "settings" });
+
+const showNav = computed(() => !layoutStore.isMobile || !current.value);
+const showContent = computed(() => Boolean(current.value) && (!layoutStore.isMobile || Boolean(currentId.value)));
 </script>
 
 <template>
 	<base-page class="settings-page" :title="translate('settings.title')">
-		<template #subtitle>
-			<el-input
-				class="settings-page__search"
-				:model-value="search"
-				:placeholder="translate('common.search')"
-				:prefix-icon="Search"
-				clearable
-				@update:model-value="(value: string) => handleSearch(value)"
-			/>
-		</template>
-		<el-empty v-if="!categories.length" :description="translate('settings.noResults')" />
-		<base-flex v-else :gap="4" wrap="wrap">
-			<settings-category-card
-				v-for="category in categories"
-				:key="category.id"
-				:title="category.title"
-				:route-name="category.routeName"
-			/>
-		</base-flex>
+		<div class="settings-page__layout">
+			<nav v-if="showNav" class="settings-page__nav" :aria-label="translate('settings.title')">
+				<el-input
+					v-model="search"
+					class="settings-page__search"
+					:placeholder="translate('common.search')"
+					:prefix-icon="Search"
+					clearable
+				/>
+				<p v-if="!groups.length" class="settings-page__empty">{{ translate("settings.noResults") }}</p>
+				<section v-for="entry in groups" :key="entry.group" class="settings-page__group">
+					<h2 class="settings-page__group-title">{{ translate(`settings.groups.${entry.group}`) }}</h2>
+					<button
+						v-for="item in entry.items"
+						:key="item.id"
+						type="button"
+						class="settings-page__link"
+						:class="{ 'is-active': item.id === current?.id }"
+						:aria-current="item.id === current?.id ? 'page' : undefined"
+						@click="() => handleOpen(item.id)"
+					>
+						<el-icon :size="16" aria-hidden="true"><component :is="item.icon" /></el-icon>
+						<span>{{ item.title }}</span>
+					</button>
+				</section>
+			</nav>
+
+			<main v-if="showContent && current" class="settings-page__content">
+				<button v-if="layoutStore.isMobile" type="button" class="settings-page__back" @click="handleBackToList">
+					← {{ translate("settings.allSettings") }}
+				</button>
+				<header class="settings-page__header">
+					<h2>{{ current.title }}</h2>
+					<p>{{ current.description }}</p>
+				</header>
+				<component :is="current.component" :key="current.id" />
+			</main>
+		</div>
 	</base-page>
 </template>
 
@@ -58,19 +118,113 @@ const handleSearch = (value: string) => {
 @use "@/assets/styles/maps" as *;
 
 .settings-page {
-	&__search {
-		margin-top: map.get($spacers, 4);
-		max-width: 320px;
+	&__layout {
+		display: grid;
+		grid-template-columns: 240px minmax(0, 1fr);
+		align-items: start;
+		gap: map.get($spacers, 6);
+	}
 
-		:deep(.el-input__wrapper) {
-			border-radius: 99px;
-			box-shadow: 0 0 0 1px var(--mt-color-gray-200) inset;
+	&__nav {
+		position: sticky;
+		top: map.get($spacers, 4);
+		display: flex;
+		flex-direction: column;
+		gap: map.get($spacers, 4);
+	}
+
+	&__search :deep(.el-input__wrapper) {
+		border-radius: 99px;
+	}
+
+	&__empty {
+		margin: 0;
+		color: var(--mt-color-gray-500);
+		font-size: map.get($font-sizes, 7);
+	}
+
+	&__group {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	&__group-title {
+		margin: 0 0 map.get($spacers, 1);
+		padding: 0 map.get($spacers, 3);
+		color: var(--mt-color-gray-400);
+		font-size: map.get($font-sizes, 8);
+		font-weight: 650;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	&__link {
+		display: flex;
+		align-items: center;
+		gap: map.get($spacers, 3);
+		width: 100%;
+		padding: map.get($spacers, 2) map.get($spacers, 3);
+		border: 0;
+		border-radius: var(--mt-radius-sm);
+		background: transparent;
+		color: var(--mt-color-gray-600);
+		font: inherit;
+		font-size: map.get($font-sizes, 6);
+		text-align: left;
+		cursor: pointer;
+
+		&:hover {
+			background: var(--mt-color-gray-50);
+			color: var(--mt-color-text);
+		}
+
+		&.is-active {
+			background: var(--mt-color-primary-light);
+			color: var(--mt-color-primary);
+			font-weight: 600;
 		}
 	}
 
-	@media (max-width: 768px) {
-		&__search {
-			max-width: 100%;
+	&__content {
+		display: flex;
+		flex-direction: column;
+		gap: map.get($spacers, 5);
+		min-width: 0;
+	}
+
+	&__back {
+		align-self: flex-start;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--mt-color-primary);
+		font: inherit;
+		font-size: map.get($font-sizes, 7);
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	&__header {
+		h2 {
+			margin: 0;
+			font-size: map.get($font-sizes, 3);
+		}
+
+		p {
+			margin: map.get($spacers, 1) 0 0;
+			color: var(--mt-color-gray-500);
+			font-size: map.get($font-sizes, 7);
+		}
+	}
+
+	@media (max-width: 900px) {
+		&__layout {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		&__nav {
+			position: static;
 		}
 	}
 }

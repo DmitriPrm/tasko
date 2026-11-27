@@ -56,3 +56,9 @@ export const projectStatusDot: Record<string, string> = {
 	COMPLETED: "var(--mt-color-primary)",
 	ARCHIVED: "var(--mt-color-gray-400)",
 };
+
+/** Порядок для сортировки: от низкого приоритета к критическому */
+export const PRIORITY_RANK: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+
+/** Порядок статусов по ходу работы, отменённые в конце */
+export const STATUS_RANK: Record<string, number> = { TODO: 1, IN_PROGRESS: 2, REVIEW: 3, DONE: 4, CANCELLED: 5 };

@@ -50,12 +50,7 @@ const handleCancel = () => {
 				<el-radio value="delete">{{ translate("board.deleteWithTasks") }}</el-radio>
 				<el-radio value="move" :disabled="!otherColumns.length">{{ translate("board.deleteAndMove") }}</el-radio>
 			</el-radio-group>
-			<el-select
-				v-model="targetColumnId"
-				:disabled="action !== 'move'"
-				:teleported="false"
-				:placeholder="translate('board.chooseColumn')"
-			>
+			<el-select v-model="targetColumnId" :disabled="action !== 'move'" :placeholder="translate('board.chooseColumn')">
 				<el-option v-for="item in otherColumns" :key="item.id" :label="item.name" :value="item.id" />
 			</el-select>
 			<base-flex :gap="3">

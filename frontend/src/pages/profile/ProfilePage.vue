@@ -10,18 +10,21 @@ import { baseApi } from "@/shared/api/baseApi";
 import type { Profile, Task } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { useOnTaskChange } from "@/shared/lib/composable/useOnTaskChange";
-import { formatDate, isTaskOverdue } from "@/shared/lib/helpers/formatDate";
+import { formatDate, isTaskOverdue, matchesDeadline } from "@/shared/lib/helpers/formatDate";
 import {
+	PRIORITY_RANK,
 	priorityLabel,
 	priorityTagType,
 	projectStatusDot,
 	roleLabel,
 	statusLabel,
+	STATUS_RANK,
 	statusTagType,
 } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseAvatar from "@/shared/ui/avatar/BaseAvatar.vue";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
+import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import { Clock, CircleCheck, Edit, Memo, Warning } from "@/shared/ui/icon/icons";
 import BasePage from "@/shared/ui/page/BasePage.vue";
 import BaseTable from "@/shared/ui/table/BaseTable.vue";
@@ -45,13 +48,21 @@ function applyProfile(state?: Profile) {
 	fullName.value = state.fullName;
 }
 
-const { state: profile, isLoading, fetch: fetchProfile } = useFetch(baseApi.users.getProfile, "data", {
+const {
+	state: profile,
+	isLoading,
+	fetch: fetchProfile,
+} = useFetch(baseApi.users.getProfile, "data", {
 	immediate: true,
 	pathParams: computed(() => ({ id: userId.value })),
 	onSuccess: ({ state }) => applyProfile(state),
 });
 
-const { state: tasksState, isLoading: isTasksLoading, fetch: fetchTasks } = useFetch(baseApi.tasks.getTasks, "data", {
+const {
+	state: tasksState,
+	isLoading: isTasksLoading,
+	fetch: fetchTasks,
+} = useFetch(baseApi.tasks.getTasks, "data", {
 	immediate: true,
 	params: computed(() => ({ assigneeId: userId.value, perPage: 100 })),
 });
@@ -60,46 +71,64 @@ const tasks = computed(() => (tasksState.value?.items || []) as Task[]);
 const tasksTotal = computed(() => tasksState.value?.total ?? tasks.value.length);
 const canViewTasks = computed(() => authStore.hasPermission("TASKS_VIEW"));
 
-const STATUS_ORDER = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "CANCELLED"] as const;
+const PROGRESS_ORDER = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const;
 const STATUS_COLOR: Record<string, string> = {
 	TODO: "var(--mt-color-gray-300)",
 	IN_PROGRESS: "var(--mt-color-warning)",
 	REVIEW: "var(--mt-color-primary)",
 	DONE: "var(--mt-color-success)",
-	CANCELLED: "var(--mt-color-gray-200)",
 };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isDone = (task: Task) => task.isCompleted || task.status === "DONE";
-const isOpen = (task: Task) => !isDone(task) && task.status !== "CANCELLED";
+const isCancelled = (task: Task) => task.status === "CANCELLED" && !task.isCompleted;
+const isOpen = (task: Task) => !isDone(task) && !isCancelled(task);
 
-const stats = computed(() => {
-	const list = tasks.value;
-	const done = list.filter(isDone).length;
-	const open = list.filter(isOpen);
-	return {
-		assigned: list.length,
-		inProgress: list.filter((task) => task.status === "IN_PROGRESS" && !isDone(task)).length,
-		done,
-		overdue: list.filter(isTaskOverdue).length,
-		open: open.length,
-		percent: list.length ? Math.round((done / list.length) * 100) : 0,
-	};
+const openTasks = computed(() => tasks.value.filter(isOpen));
+const overdueTasks = computed(() => openTasks.value.filter((task) => isTaskOverdue(task)));
+const weekTasks = computed(() => openTasks.value.filter((task) => matchesDeadline(task, "week")));
+const doneRecently = computed(() => {
+	const since = Date.now() - 30 * DAY_MS;
+	return tasks.value.filter((task) => isDone(task) && task.completedAt && new Date(task.completedAt).getTime() >= since)
+		.length;
 });
+
+/** Отменённые задачи в ход работы не входят: иначе они занижают процент выполнения */
+const countable = computed(() => tasks.value.filter((task) => !isCancelled(task)));
+const cancelledCount = computed(() => tasks.value.length - countable.value.length);
+const doneCount = computed(() => countable.value.filter(isDone).length);
+const completionPercent = computed(() =>
+	countable.value.length ? Math.round((doneCount.value / countable.value.length) * 100) : 0,
+);
 
 const statusBreakdown = computed(() => {
-	const total = tasks.value.length || 1;
-	return STATUS_ORDER.map((status) => {
-		const count = tasks.value.filter((task) => (status === "DONE" ? isDone(task) : task.status === status && !isDone(task))).length;
+	const total = countable.value.length || 1;
+	return PROGRESS_ORDER.map((status) => {
+		const count = countable.value.filter((task) =>
+			status === "DONE" ? isDone(task) : task.status === status && !isDone(task),
+		).length;
 		return { status, count, width: (count / total) * 100 };
-	}).filter((item) => item.count > 0);
+	});
 });
 
-const upcoming = computed(() =>
-	tasks.value
-		.filter((task) => isOpen(task) && task.deadlineAt)
-		.sort((a, b) => new Date(a.deadlineAt as string).getTime() - new Date(b.deadlineAt as string).getTime())
-		.slice(0, 6),
-);
+/** Сроки по группам, как в «Моих задачах» Asana: что горит — сверху */
+const DUE_GROUPS = ["overdue", "today", "week", "later"] as const;
+const DUE_LIMIT = 5;
+const deadlineGroups = computed(() => {
+	const withDeadline = openTasks.value
+		.filter((task) => task.deadlineAt)
+		.sort((a, b) => new Date(a.deadlineAt as string).getTime() - new Date(b.deadlineAt as string).getTime());
+	const groupOf = (task: Task) => {
+		if (isTaskOverdue(task)) return "overdue";
+		if (matchesDeadline(task, "today")) return "today";
+		if (matchesDeadline(task, "week")) return "week";
+		return "later";
+	};
+	return DUE_GROUPS.map((key) => {
+		const items = withDeadline.filter((task) => groupOf(task) === key);
+		return { key, title: translate(`profile.due.${key}`), total: items.length, items: items.slice(0, DUE_LIMIT) };
+	}).filter((group) => group.total > 0);
+});
 
 const userProjects = computed(() => {
 	const map = new Map<string, { id: string; name: string; status: string; open: number; total: number }>();
@@ -125,20 +154,57 @@ const filteredTasks = computed(() => {
 	return tasks.value.filter(isOpen);
 });
 
-const statCards = computed(() => [
-	{ key: "assigned", label: translate("profile.assigned"), value: stats.value.assigned, icon: Memo, tone: "primary" },
-	{ key: "inProgress", label: translate("profile.inProgress"), value: stats.value.inProgress, icon: Clock, tone: "warning" },
-	{ key: "done", label: translate("profile.done"), value: stats.value.done, icon: CircleCheck, tone: "success" },
-	{ key: "overdue", label: translate("profile.overdue"), value: stats.value.overdue, icon: Warning, tone: "danger" },
-]);
+/** Карточки ведут в список задач с подходящим фильтром */
+const statCards = computed(
+	() =>
+		[
+			{
+				key: "open",
+				label: translate("profile.open"),
+				value: openTasks.value.length,
+				icon: Memo,
+				tone: "primary",
+				filter: "active",
+			},
+			{
+				key: "overdue",
+				label: translate("profile.overdue"),
+				value: overdueTasks.value.length,
+				icon: Warning,
+				tone: "danger",
+				filter: "active",
+			},
+			{
+				key: "week",
+				label: translate("profile.dueWeek"),
+				value: weekTasks.value.length,
+				icon: Clock,
+				tone: "warning",
+				filter: "active",
+			},
+			{
+				key: "done",
+				label: translate("profile.doneRecently"),
+				value: doneRecently.value,
+				icon: CircleCheck,
+				tone: "success",
+				filter: "done",
+			},
+		] as const,
+);
+
+const handleStat = (filter: "active" | "done") => {
+	taskFilter.value = filter;
+	activeTab.value = "tasks";
+};
 
 const initialTab = () => (canViewTasks.value ? "overview" : "details");
 
 const columns = computed(() => [
 	{ key: "title", label: translate("task.name") },
 	{ key: "project", label: translate("project.title") },
-	{ key: "status", label: translate("task.status") },
-	{ key: "priority", label: translate("task.priority") },
+	{ key: "status", label: translate("task.status"), sortValue: (row: Task) => STATUS_RANK[row.status] },
+	{ key: "priority", label: translate("task.priority"), sortValue: (row: Task) => PRIORITY_RANK[row.priority] },
 	{ key: "deadlineAt", label: translate("task.deadline") },
 ]);
 
@@ -181,6 +247,18 @@ const handleSavedRights = () => {
 };
 
 const handlePickAvatar = () => avatarInput.value?.click();
+
+/** Аватар меняет только сам пользователь (сервер проверяет то же самое) */
+const canEditAvatar = computed(() => Boolean(profile.value?.canEditAvatar));
+const isAvatarViewerOpen = ref(false);
+
+const handleAvatarClick = () => {
+	if (profile.value?.avatarUrl) {
+		isAvatarViewerOpen.value = true;
+		return;
+	}
+	if (canEditAvatar.value) handlePickAvatar();
+};
 
 const cropperFile = ref<File | null>(null);
 const isCropperOpen = ref(false);
@@ -242,13 +320,15 @@ watch(
 					<div class="profile-page__cover" aria-hidden="true" />
 					<div class="profile-page__hero-body">
 						<div class="profile-page__avatar-wrap">
+							<!-- Клик по фото открывает его целиком; менять аватар может только сам владелец -->
 							<button
-								v-if="profile.canEdit"
 								class="profile-page__avatar"
+								:class="{ 'profile-page__avatar--static': !profile.avatarUrl && !canEditAvatar }"
 								type="button"
-								:aria-label="translate('profile.changeAvatar')"
-								:title="translate('profile.changeAvatar')"
-								@click="handlePickAvatar"
+								:aria-label="profile.avatarUrl ? translate('profile.openAvatar') : translate('profile.changeAvatar')"
+								:title="profile.avatarUrl ? translate('profile.openAvatar') : ''"
+								:disabled="!profile.avatarUrl && !canEditAvatar"
+								@click="handleAvatarClick"
 							>
 								<base-avatar
 									:name="profile.fullName"
@@ -257,19 +337,17 @@ watch(
 									:src="profile.avatarUrl"
 									:size="96"
 								/>
-								<span class="profile-page__avatar-edit">
-									<el-icon :size="18"><edit /></el-icon>
-								</span>
 							</button>
-							<span v-else class="profile-page__avatar profile-page__avatar--static">
-								<base-avatar
-									:name="profile.fullName"
-									:initials="profile.initials"
-									:color="profile.avatarColor"
-									:src="profile.avatarUrl"
-									:size="96"
-								/>
-							</span>
+							<button
+								v-if="canEditAvatar"
+								class="profile-page__avatar-edit"
+								type="button"
+								:aria-label="translate('profile.changeAvatar')"
+								:title="translate('profile.changeAvatar')"
+								@click="handlePickAvatar"
+							>
+								<el-icon :size="16"><edit /></el-icon>
+							</button>
 						</div>
 						<div class="profile-page__identity">
 							<h2 class="profile-page__name">{{ profile.fullName }}</h2>
@@ -281,7 +359,7 @@ watch(
 								</el-tag>
 							</base-flex>
 						</div>
-						<base-button v-if="profile.canEdit" class="profile-page__hero-action" @click="handlePickAvatar">
+						<base-button v-if="canEditAvatar" class="profile-page__hero-action" @click="handlePickAvatar">
 							{{ translate("profile.changeAvatar") }}
 						</base-button>
 					</div>
@@ -291,6 +369,13 @@ watch(
 						type="file"
 						accept="image/png,image/jpeg,image/webp"
 						@change="handleAvatarFile"
+					/>
+					<el-image-viewer
+						v-if="isAvatarViewerOpen && profile.avatarUrl"
+						:url-list="[profile.avatarUrl]"
+						hide-on-click-modal
+						teleported
+						@close="isAvatarViewerOpen = false"
 					/>
 					<profile-avatar-cropper
 						v-model="isCropperOpen"
@@ -307,7 +392,9 @@ watch(
 							<dl class="profile-page__facts">
 								<div>
 									<dt>{{ translate("users.email") }}</dt>
-									<dd><a class="profile-page__link" :href="`mailto:${profile.email}`">{{ profile.email }}</a></dd>
+									<dd>
+										<a class="profile-page__link" :href="`mailto:${profile.email}`">{{ profile.email }}</a>
+									</dd>
 								</div>
 								<div>
 									<dt>{{ translate("users.role") }}</dt>
@@ -348,6 +435,10 @@ watch(
 										:key="card.key"
 										class="profile-page__stat"
 										:class="`profile-page__stat--${card.tone}`"
+										role="button"
+										tabindex="0"
+										@click="handleStat(card.filter)"
+										@keydown.enter="handleStat(card.filter)"
 									>
 										<span class="profile-page__stat-icon" aria-hidden="true">
 											<el-icon :size="20"><component :is="card.icon" /></el-icon>
@@ -358,55 +449,79 @@ watch(
 								</div>
 
 								<base-card class="profile-page__panel profile-page__panel--spaced">
-									<base-flex align="center" justify="space-between" :gap="3">
-										<h3 class="profile-page__panel-title">{{ translate("profile.distribution") }}</h3>
+									<base-flex align="center" justify="space-between" :gap="3" wrap="wrap">
+										<h3 class="profile-page__panel-title">{{ translate("profile.progress") }}</h3>
 										<span class="profile-page__percent">
-											{{ translate("profile.completion") }}: <strong>{{ stats.percent }}%</strong>
+											{{ translate("profile.completion") }}: <strong>{{ doneCount }}</strong>
+											{{ translate("profile.of") }} {{ countable.length }} · <strong>{{ completionPercent }}%</strong>
 										</span>
 									</base-flex>
-									<div v-if="statusBreakdown.length" class="profile-page__bar" role="img">
-										<span
-											v-for="item in statusBreakdown"
-											:key="item.status"
-											class="profile-page__bar-segment"
-											:style="{ width: `${item.width}%`, background: STATUS_COLOR[item.status] }"
-											:title="`${statusLabel(item.status)}: ${item.count}`"
-										/>
+									<div
+										class="profile-page__bar"
+										:class="{ 'profile-page__bar--empty': !countable.length }"
+										role="img"
+										:aria-label="statusBreakdown.map((item) => `${statusLabel(item.status)}: ${item.count}`).join(', ')"
+									>
+										<template v-for="item in statusBreakdown" :key="item.status">
+											<span
+												v-if="item.count"
+												class="profile-page__bar-segment"
+												:style="{ width: `${item.width}%`, background: STATUS_COLOR[item.status] }"
+												:title="`${statusLabel(item.status)}: ${item.count}`"
+											/>
+										</template>
 									</div>
-									<div v-else class="profile-page__bar profile-page__bar--empty" />
 									<ul class="profile-page__legend">
-										<li v-for="status in STATUS_ORDER" :key="status">
-											<span class="profile-page__dot" :style="{ background: STATUS_COLOR[status] }" />
-											{{ statusLabel(status) }}
-											<strong>{{
-												statusBreakdown.find((item) => item.status === status)?.count ?? 0
-											}}</strong>
+										<li v-for="item in statusBreakdown" :key="item.status">
+											<span class="profile-page__dot" :style="{ background: STATUS_COLOR[item.status] }" />
+											{{ statusLabel(item.status) }}
+											<strong>{{ item.count }}</strong>
 										</li>
 									</ul>
+									<p v-if="cancelledCount" class="profile-page__note">
+										{{ translate("profile.cancelledNote") }}: {{ cancelledCount }}
+									</p>
 								</base-card>
 
 								<base-card class="profile-page__panel profile-page__panel--spaced">
 									<h3 class="profile-page__panel-title">{{ translate("profile.deadlines") }}</h3>
 									<el-skeleton v-if="isTasksLoading && !tasksState" :rows="3" animated />
-									<ul v-else-if="upcoming.length" class="profile-page__deadlines">
-										<li v-for="task in upcoming" :key="task.id">
-											<button class="profile-page__deadline" type="button" @click="handleOpenTask(task)">
-												<span class="profile-page__deadline-main">
-													<span class="profile-page__deadline-title">{{ task.title }}</span>
-													<span class="profile-page__muted">{{ task.project?.name }}</span>
-												</span>
-												<el-tag :type="priorityTagType[task.priority]" size="small">
-													{{ priorityLabel(task.priority) }}
-												</el-tag>
-												<span
-													class="profile-page__deadline-date"
-													:class="{ 'profile-page__deadline-date--overdue': isTaskOverdue(task) }"
-												>
-													{{ formatDate(task.deadlineAt) }}
-												</span>
-											</button>
-										</li>
-									</ul>
+									<template v-else-if="deadlineGroups.length">
+										<section v-for="group in deadlineGroups" :key="group.key" class="profile-page__due-group">
+											<h4 class="profile-page__due-title" :class="`profile-page__due-title--${group.key}`">
+												{{ group.title }}
+												<span class="profile-page__due-count">{{ group.total }}</span>
+											</h4>
+											<ul class="profile-page__deadlines">
+												<li v-for="task in group.items" :key="task.id">
+													<button class="profile-page__deadline" type="button" @click="handleOpenTask(task)">
+														<span class="profile-page__deadline-main">
+															<span class="profile-page__deadline-title">{{ task.title }}</span>
+															<span class="profile-page__muted">{{ task.project?.name }}</span>
+														</span>
+														<task-risk-tag :task="task" />
+														<el-tag :type="priorityTagType[task.priority]" size="small">
+															{{ priorityLabel(task.priority) }}
+														</el-tag>
+														<span
+															class="profile-page__deadline-date"
+															:class="{ 'profile-page__deadline-date--overdue': group.key === 'overdue' }"
+														>
+															{{ formatDate(task.deadlineAt) }}
+														</span>
+													</button>
+												</li>
+											</ul>
+											<base-button
+												v-if="group.total > group.items.length"
+												text
+												type="primary"
+												@click="handleStat('active')"
+											>
+												{{ translate("profile.showAll") }} ({{ group.total }})
+											</base-button>
+										</section>
+									</template>
 									<p v-else class="profile-page__muted">{{ translate("profile.noDeadlines") }}</p>
 								</base-card>
 							</el-tab-pane>
@@ -504,10 +619,8 @@ watch(
 
 	&__cover {
 		height: 120px;
-		background:
-			radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
-			radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.18), transparent 40%),
-			var(--mt-gradient-brand);
+		background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.28), transparent 45%),
+			radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.18), transparent 40%), var(--mt-gradient-brand);
 	}
 
 	&__hero-body {
@@ -519,39 +632,53 @@ watch(
 	}
 
 	&__avatar-wrap {
+		position: relative;
 		flex-shrink: 0;
 	}
 
 	&__avatar {
-		position: relative;
 		display: block;
 		padding: 0;
 		border: 4px solid var(--mt-color-white);
 		border-radius: 50%;
 		background: var(--mt-color-white);
 		box-shadow: var(--mt-shadow);
-		cursor: pointer;
+		cursor: zoom-in;
+		transition: box-shadow 0.18s var(--mt-ease);
 
-		&--static {
-			cursor: default;
+		&:hover:not(:disabled),
+		&:focus-visible {
+			box-shadow: var(--mt-shadow-hover);
 		}
 
-		&:hover .profile-page__avatar-edit,
-		&:focus-visible .profile-page__avatar-edit {
-			opacity: 1;
+		&--static,
+		&:disabled {
+			cursor: default;
 		}
 	}
 
+	/* Значок «изменить» — отдельная кнопка, видна только владельцу */
 	&__avatar-edit {
 		position: absolute;
-		inset: 0;
+		right: 2px;
+		bottom: 2px;
 		display: grid;
 		place-items: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		border: 2px solid var(--mt-color-white);
 		border-radius: 50%;
-		background: rgba(15, 18, 38, 0.5);
-		color: #fff;
-		opacity: 0;
-		transition: opacity 0.18s var(--mt-ease);
+		background: var(--mt-color-primary);
+		color: var(--mt-color-white);
+		box-shadow: var(--mt-shadow);
+		cursor: pointer;
+		transition: transform 0.15s var(--mt-ease);
+
+		&:hover,
+		&:focus-visible {
+			transform: scale(1.08);
+		}
 	}
 
 	&__identity {
@@ -716,6 +843,18 @@ watch(
 		--stat-color: var(--mt-color-primary);
 		--stat-bg: var(--mt-color-primary-light);
 
+		cursor: pointer;
+		transition:
+			box-shadow 0.18s var(--mt-ease),
+			border-color 0.18s var(--mt-ease);
+
+		&:hover,
+		&:focus-visible {
+			border-color: var(--stat-color);
+			box-shadow: var(--mt-shadow-hover);
+			outline: none;
+		}
+
 		display: grid;
 		grid-template-columns: auto 1fr;
 		grid-template-areas:
@@ -815,6 +954,40 @@ watch(
 		}
 	}
 
+	&__note {
+		margin: map.get($spacers, 3) 0 0;
+		color: var(--mt-color-gray-400);
+		font-size: map.get($font-sizes, 8);
+	}
+
+	&__due-group + &__due-group {
+		margin-top: map.get($spacers, 4);
+	}
+
+	&__due-title {
+		display: flex;
+		align-items: center;
+		gap: map.get($spacers, 2);
+		margin: 0 0 map.get($spacers, 1);
+		color: var(--mt-color-gray-500);
+		font-size: map.get($font-sizes, 8);
+		font-weight: 650;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+
+		&--overdue {
+			color: var(--mt-color-danger);
+		}
+	}
+
+	&__due-count {
+		padding: 0 6px;
+		border-radius: 99px;
+		background: var(--mt-color-gray-100);
+		color: var(--mt-color-gray-600);
+		font-variant-numeric: tabular-nums;
+	}
+
 	&__deadlines {
 		display: flex;
 		flex-direction: column;
@@ -897,9 +1070,30 @@ watch(
 }
 
 @media (max-width: 560px) {
+	.profile-page__cover {
+		height: 88px;
+	}
+
 	.profile-page__hero-body {
 		flex-direction: column;
 		align-items: flex-start;
+		gap: map.get($spacers, 3);
+		padding: 0 map.get($spacers, 5) map.get($spacers, 5);
+	}
+
+	/* В колонке «flex: 1 1 240px» превращался в высоту 240px — отсюда пустое место под именем */
+	.profile-page__identity {
+		flex: 0 0 auto;
+	}
+
+	/* Аватар наезжает на обложку, как в соцсетях */
+	.profile-page__avatar-wrap {
+		margin-top: -48px;
+	}
+
+	.profile-page__stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: map.get($spacers, 3);
 	}
 
 	.profile-page__deadline {

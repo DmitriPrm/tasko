@@ -23,9 +23,7 @@ const selectedIds = computed(() => {
 	return props.modelValue ? [props.modelValue] : [];
 });
 
-const selectedUsers = computed(() =>
-	props.users.filter((user) => selectedIds.value.includes(user.id)),
-);
+const selectedUsers = computed(() => props.users.filter((user) => selectedIds.value.includes(user.id)));
 
 const handleChange = (value: string | string[]) => {
 	emit("update:modelValue", value);

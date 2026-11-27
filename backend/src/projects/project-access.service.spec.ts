@@ -78,9 +78,7 @@ describe("ProjectAccessService", () => {
 	});
 
 	it("forbids a user who is not a member", async () => {
-		await expect(
-			service.assertCanView("p1", { ...member, id: "stranger" }),
-		).rejects.toBeInstanceOf(ForbiddenException);
+		await expect(service.assertCanView("p1", { ...member, id: "stranger" })).rejects.toBeInstanceOf(ForbiddenException);
 	});
 
 	it("throws when the project is missing", async () => {

@@ -1,10 +1,18 @@
 <script lang="ts" setup>
-import { CircleCheck, CircleCheckFilled, Plus } from "@/shared/ui/icon/icons";
+import { CircleCheck, CircleCheckFilled, List, Lock, Plus, Warning } from "@/shared/ui/icon/icons";
 import dayjs from "dayjs";
 import { computed, ref } from "vue";
 
 import type { ProjectMember, Task } from "@/shared/api/v0/schemas";
 import { DATE_FIELD_FORMAT, formatDate, isTaskOverdue, toIsoDate } from "@/shared/lib/helpers/formatDate";
+import {
+	durationText,
+	factorLabel,
+	percent,
+	riskImpact,
+	ruleFactorLabels,
+	visibleRiskFactors,
+} from "@/shared/lib/helpers/forecast";
 import { priorityLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
@@ -27,9 +35,27 @@ const isAssigneeOpen = ref(false);
 const isDeadlineOpen = ref(false);
 
 const memberUsers = computed(() => (props.members || []).map((member) => member.user));
-const deadlineValue = computed(() =>
-	props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : "",
-);
+const deadlineValue = computed(() => (props.task.deadlineAt ? dayjs(props.task.deadlineAt).format("YYYY-MM-DD") : ""));
+
+/** Значок риска — только для открытых задач с высоким риском срыва срока */
+const riskForecast = computed(() => {
+	const forecast = props.task.forecast;
+	if (!forecast || forecast.riskLevel !== "HIGH" || props.task.isCompleted) return null;
+	if (props.task.status === "DONE" || props.task.status === "CANCELLED") return null;
+	return forecast;
+});
+
+/** Почему риск высокий: факторы модели (до трёх) или причины по правилам */
+const riskReasons = computed(() => {
+	const forecast = riskForecast.value;
+	if (!forecast) return [];
+	const rules = ruleFactorLabels(forecast).map((label) => ({ label, impact: "" }));
+	if (forecast.source !== "ML") return rules;
+	const model = visibleRiskFactors(forecast)
+		.slice(0, 3)
+		.map((factor) => ({ label: factorLabel(factor), impact: riskImpact(factor) }));
+	return [...rules, ...model];
+});
 
 const handleOpen = () => emit("open", props.task.id);
 const handleComplete = (event: Event) => {
@@ -70,20 +96,53 @@ const handleDeadline = (value: string | "") => {
 				</el-icon>
 			</button>
 			<base-flex direction="column" :gap="3" width="full">
-				<strong
-					class="project-board-card__title"
-					:class="{ 'project-board-card__title--done': task.isCompleted }"
-				>
+				<strong class="project-board-card__title" :class="{ 'project-board-card__title--done': task.isCompleted }">
 					{{ task.title }}
 				</strong>
-				<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
-				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
+				<base-flex align="center" :gap="2" wrap="wrap">
+					<span class="project-board-card__priority">{{ priorityLabel(task.priority) }}</span>
 					<span
-						v-for="tag in task.tags"
-						:key="tag.id"
-						class="project-board-card__tag"
-						:style="{ color: tag.color }"
+						v-if="task.openBlockersCount"
+						class="project-board-card__badge project-board-card__badge--blocked"
+						:title="translate('task.blocked')"
 					>
+						<el-icon :size="12" aria-hidden="true"><lock /></el-icon>
+						{{ task.openBlockersCount }}
+					</span>
+					<el-tooltip v-if="riskForecast" placement="top" :show-after="150" popper-class="risk-tooltip">
+						<span
+							class="project-board-card__badge project-board-card__badge--risk"
+							tabindex="0"
+							:aria-label="`${translate('forecast.highRiskBadge')}: ${percent(riskForecast.riskProbability)}`"
+						>
+							<el-icon :size="12" aria-hidden="true"><warning /></el-icon>
+							{{ percent(riskForecast.riskProbability) }}
+						</span>
+						<template #content>
+							<div class="risk-tooltip__body">
+								<strong>
+									{{ translate("forecast.highRiskBadge") }} · {{ percent(riskForecast.riskProbability) }}
+								</strong>
+								<span>{{ translate("forecast.duration") }}: {{ durationText(riskForecast) }}</span>
+								<ul v-if="riskReasons.length">
+									<li v-for="reason in riskReasons" :key="reason.label">
+										<span>{{ reason.label }}</span>
+										<span v-if="reason.impact" class="risk-tooltip__impact">{{ reason.impact }}</span>
+									</li>
+								</ul>
+								<span class="risk-tooltip__source">
+									{{ translate(riskForecast.source === "ML" ? "forecast.sourceMl" : "forecast.sourceRules") }}
+								</span>
+							</div>
+						</template>
+					</el-tooltip>
+					<span v-if="task.subtasksCount" class="project-board-card__badge" :title="translate('task.subtasks')">
+						<el-icon :size="12" aria-hidden="true"><list /></el-icon>
+						{{ task.subtasksCount }}
+					</span>
+				</base-flex>
+				<base-flex v-if="task.tags?.length" :gap="2" wrap="wrap">
+					<span v-for="tag in task.tags" :key="tag.id" class="project-board-card__tag" :style="{ color: tag.color }">
 						{{ tag.name }}
 					</span>
 				</base-flex>
@@ -101,7 +160,7 @@ const handleDeadline = (value: string | "") => {
 						<template #reference>
 							<button
 								class="project-board-card__date"
-								:class="{ 								'project-board-card__date--overdue': isTaskOverdue(task) }"
+								:class="{ 'project-board-card__date--overdue': isTaskOverdue(task) }"
 								type="button"
 								@click="handleStop"
 								@mousedown="handleStop"
@@ -119,19 +178,9 @@ const handleDeadline = (value: string | "") => {
 							@update:model-value="handleAssignee"
 						/>
 						<template #reference>
-							<button
-								class="project-board-card__assignee"
-								type="button"
-								@click="handleStop"
-								@mousedown="handleStop"
-							>
+							<button class="project-board-card__assignee" type="button" @click="handleStop" @mousedown="handleStop">
 								<base-user-name v-if="task.assignee" :user="task.assignee" icon-only :size="24" :link="false" />
-								<base-flex
-									v-else
-									class="project-board-card__assignee-empty"
-									align="center"
-									justify="center"
-								>
+								<base-flex v-else class="project-board-card__assignee-empty" align="center" justify="center">
 									<el-icon :size="14"><plus /></el-icon>
 								</base-flex>
 							</button>
@@ -146,6 +195,44 @@ const handleDeadline = (value: string | "") => {
 <style scoped lang="scss">
 @use "sass:map";
 @use "@/assets/styles/maps" as *;
+
+/* Подсказка рендерится в body, поэтому стили глобальные */
+:global(.risk-tooltip) {
+	max-width: 280px;
+}
+
+:global(.risk-tooltip__body) {
+	display: flex;
+	flex-direction: column;
+	gap: map.get($spacers, 1);
+	font-size: map.get($font-sizes, 8);
+	line-height: 1.4;
+}
+
+:global(.risk-tooltip__body ul) {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: map.get($spacers, 1) 0;
+	padding: 0;
+	list-style: none;
+}
+
+:global(.risk-tooltip__body li) {
+	display: flex;
+	justify-content: space-between;
+	gap: map.get($spacers, 3);
+}
+
+:global(.risk-tooltip__impact) {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+:global(.risk-tooltip__source) {
+	opacity: 0.7;
+}
 
 .project-board-card {
 	margin-bottom: map.get($spacers, 2);
@@ -203,6 +290,28 @@ const handleDeadline = (value: string | "") => {
 		background: var(--mt-color-gray-50);
 		font-size: map.get($font-sizes, 8);
 		font-weight: 600;
+	}
+
+	&__badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		padding: 1px map.get($spacers, 2);
+		border-radius: 6px;
+		background: var(--mt-color-gray-50);
+		color: var(--mt-color-gray-500);
+		font-size: map.get($font-sizes, 8);
+		font-weight: 600;
+
+		&--blocked {
+			background: var(--mt-color-warning-light);
+			color: var(--mt-color-warning);
+		}
+
+		&--risk {
+			background: var(--mt-color-danger-light);
+			color: var(--mt-color-danger);
+		}
 	}
 
 	&__priority {

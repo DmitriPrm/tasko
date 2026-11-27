@@ -1,7 +1,10 @@
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { TaskStatus } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { RiskAlertsService } from "../notifications/risk-alerts.service";
+import { PredictionsService } from "../predictions/predictions.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ProjectAccessService } from "../projects/project-access.service";
 import { TasksService } from "./tasks.service";
@@ -24,6 +27,7 @@ describe("TasksService", () => {
 	const projectAccess = {
 		assertCanView: jest.fn(),
 		isProjectMember: jest.fn(),
+		isActiveProjectMember: jest.fn().mockResolvedValue(true),
 	};
 	const notifications = {
 		notifyStatusChanged: jest.fn(),
@@ -32,12 +36,17 @@ describe("TasksService", () => {
 	};
 
 	const access = { assert: jest.fn() };
+	const predictions = { refresh: jest.fn() };
+	const riskAlerts = { checkTask: jest.fn() };
 
 	const service = new TasksService(
 		prisma as unknown as PrismaService,
 		projectAccess as unknown as ProjectAccessService,
 		notifications as unknown as NotificationsService,
 		access as unknown as AccessService,
+		predictions as unknown as PredictionsService,
+		riskAlerts as unknown as RiskAlertsService,
+		{ section: jest.fn().mockReturnValue({ strictWorkflow: false }) } as unknown as SystemSettingsService,
 	);
 
 	const actor = {
@@ -81,11 +90,14 @@ describe("TasksService", () => {
 		tags: [],
 		coAssignees: [],
 		_count: { comments: 0, subtasks: 0 },
+		predictions: [],
 	};
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		predictions.refresh.mockResolvedValue(null);
 		prisma.task.findUnique.mockResolvedValue(task);
+		projectAccess.isActiveProjectMember.mockResolvedValue(true);
 		prisma.task.update.mockImplementation(async ({ data }) => ({ ...task, ...data }));
 		prisma.projectColumn.count.mockResolvedValue(5);
 		prisma.projectColumn.findFirst.mockImplementation(
@@ -126,6 +138,28 @@ describe("TasksService", () => {
 		expect(notifications.notifyStatusChanged).toHaveBeenCalled();
 	});
 
+	it("recomputes the forecast when a field the model uses changes", async () => {
+		predictions.refresh.mockResolvedValue({
+			durationHours: 30,
+			riskProbability: 0.82,
+			createdAt: new Date("2026-01-02"),
+			factors: { risk: [{ feature: "priority", label: "Приоритет", impact: 0.2 }], duration: [] },
+			durationModel: { version: "duration-v1", algorithm: "ridge" },
+			riskModel: { version: "risk-v1", algorithm: "logistic_regression" },
+		});
+
+		const result = await service.update(actor, "t1", { priority: "CRITICAL" });
+
+		expect(predictions.refresh).toHaveBeenCalledWith("t1", "UPDATED");
+		expect(riskAlerts.checkTask).toHaveBeenCalledWith("t1");
+		expect(result.forecast).toMatchObject({ source: "ML", riskLevel: "HIGH", durationHours: 30 });
+	});
+
+	it("keeps the forecast when only the completion flag changes", async () => {
+		await service.update(actor, "t1", { isCompleted: true });
+		expect(predictions.refresh).not.toHaveBeenCalled();
+	});
+
 	it("toggles isCompleted without changing the column status", async () => {
 		const result = await service.update(actor, "t1", { isCompleted: true });
 
@@ -137,11 +171,62 @@ describe("TasksService", () => {
 		);
 	});
 
-	it("deletes a task after edit access check", async () => {
+	it("deletes a task that was never started", async () => {
 		const result = await service.remove(actor, "t1");
 
 		expect(prisma.task.delete).toHaveBeenCalledWith({ where: { id: "t1" } });
-		expect(result.success).toBe(true);
+		expect(result).toEqual({ success: true, cancelled: false });
+	});
+
+	it("cancels a started task instead of deleting it and keeps history", async () => {
+		prisma.task.findUnique.mockResolvedValue({
+			...task,
+			status: TaskStatus.IN_PROGRESS,
+			actualStartAt: new Date("2026-01-02"),
+		});
+
+		const result = await service.remove(actor, "t1");
+
+		expect(prisma.task.delete).not.toHaveBeenCalled();
+		expect(result).toEqual({ success: true, cancelled: true });
+		expect(prisma.task.update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				data: expect.objectContaining({
+					status: TaskStatus.CANCELLED,
+					statusHistory: {
+						create: expect.objectContaining({ fromStatus: TaskStatus.IN_PROGRESS, toStatus: TaskStatus.CANCELLED }),
+					},
+				}),
+			}),
+		);
+	});
+
+	it("treats a task closed straight from TODO as started", async () => {
+		prisma.task.findUnique.mockResolvedValue({ ...task, status: TaskStatus.DONE });
+
+		const result = await service.remove(actor, "t1");
+
+		expect(result.cancelled).toBe(true);
+		expect(prisma.task.delete).not.toHaveBeenCalled();
+	});
+
+	it("rejects a deadline earlier than the creation day", async () => {
+		await expect(service.update(actor, "t1", { deadlineAt: "2025-12-25T00:00:00.000Z" })).rejects.toThrow(
+			"Дедлайн не может быть раньше даты создания",
+		);
+	});
+
+	it("accepts a deadline on the creation day in an earlier time zone", async () => {
+		// 2026-01-01 в UTC+3 — это 2025-12-31T21:00Z, а задача создана 2026-01-01T00:00Z
+		await expect(service.update(actor, "t1", { deadlineAt: "2025-12-31T21:00:00.000Z" })).resolves.toBeDefined();
+	});
+
+	it("does not assign a blocked or foreign user", async () => {
+		projectAccess.isActiveProjectMember.mockResolvedValue(false);
+
+		await expect(service.update(actor, "t1", { assigneeId: "u3" })).rejects.toThrow(
+			"Исполнителем может быть только активный участник проекта",
+		);
 	});
 });
 
@@ -155,6 +240,9 @@ describe("TasksService.list access", () => {
 		{} as unknown as ProjectAccessService,
 		{} as unknown as NotificationsService,
 		{} as unknown as AccessService,
+		{} as unknown as PredictionsService,
+		{} as unknown as RiskAlertsService,
+		{} as unknown as SystemSettingsService,
 	);
 
 	const executor = {

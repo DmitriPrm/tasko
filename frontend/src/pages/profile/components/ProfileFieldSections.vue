@@ -11,6 +11,7 @@ import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseIconButton from "@/shared/ui/button/BaseIconButton.vue";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
 import { Delete, Edit, Plus } from "@/shared/ui/icon/icons";
+import ProfileSectionIcon from "@/pages/profile/components/ProfileSectionIcon.vue";
 
 const emit = defineEmits<{
 	changed: [];
@@ -27,10 +28,10 @@ const askTitle = async (title: string, initial = "") => {
 		const result = await ElMessageBox.prompt("", title, {
 			inputValue: initial,
 			inputPlaceholder: translate("profile.sectionName"),
-			inputAttrs: { maxlength: 80 },
 			confirmButtonText: translate("common.save"),
 			cancelButtonText: translate("common.cancel"),
-			inputValidator: (input: string) => input.trim().length > 0,
+			// В этой версии Element Plus у prompt нет inputAttrs, поэтому длину проверяем здесь
+			inputValidator: (input: string) => input.trim().length > 0 && input.trim().length <= 80,
 			inputErrorMessage: translate("settings.sectionEmpty"),
 		});
 		return result.value.trim();
@@ -62,6 +63,11 @@ const handleRemoveSection = async (section: ProfileSection) => {
 	});
 	if (!confirmed) return;
 	await baseApi.users.removeProfileSection({ userId: props.userId, sectionId: section.id });
+	emit("changed");
+};
+
+const handleIcon = async (section: ProfileSection, icon: string | null) => {
+	await baseApi.users.renameProfileSection({ userId: props.userId, sectionId: section.id }, undefined, { icon });
 	emit("changed");
 };
 
@@ -99,7 +105,15 @@ const handleRemoveField = async (field: ProfileField) => {
 
 		<base-card v-for="section in sections" :key="section.id" class="profile-sections__card">
 			<base-flex class="profile-sections__head" align="center" justify="space-between" :gap="3">
-				<h3>{{ section.title }}</h3>
+				<base-flex align="center" :gap="3">
+					<profile-section-icon
+						:title="section.title"
+						:icon="section.icon"
+						:editable="editable"
+						@change="(icon) => handleIcon(section, icon)"
+					/>
+					<h3>{{ section.title }}</h3>
+				</base-flex>
 				<base-flex v-if="editable" :gap="1">
 					<base-icon-button :label="translate('profile.addField')" @click="() => handleAddField(section.id)">
 						<el-icon :size="16"><plus /></el-icon>

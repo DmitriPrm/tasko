@@ -5,12 +5,15 @@ import type { Task } from "@/shared/api/v0/schemas";
 import { priorityLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import BaseCard from "@/shared/ui/card/BaseCard.vue";
+import TaskRiskTag from "@/shared/ui/forecast/TaskRiskTag.vue";
 import { useTaskDrawerStore } from "@/store/taskDrawer";
 
 interface Props {
 	title: string;
 	tasks: Task[];
 	deadlines?: boolean;
+	/** Показывать риск срыва срока */
+	risk?: boolean;
 }
 
 defineProps<Props>();
@@ -28,16 +31,12 @@ const handleOpen = (taskId: string) => {
 	<base-card class="dashboard-task-list">
 		<h3>{{ title }}</h3>
 		<p v-if="!tasks.length" class="dashboard-task-list__empty">{{ translate("common.empty") }}</p>
-		<div
-			v-for="task in tasks"
-			:key="task.id"
-			class="dashboard-task-list__item"
-			@click="() => handleOpen(task.id)"
-		>
+		<div v-for="task in tasks" :key="task.id" class="dashboard-task-list__item" @click="() => handleOpen(task.id)">
 			<base-flex align="center" justify="space-between" :gap="4">
 				<span class="dashboard-task-list__title">{{ task.title }}</span>
 				<base-flex class="dashboard-task-list__meta" align="center" :gap="4">
-					<span v-if="!deadlines">{{ priorityLabel(task.priority) }}</span>
+					<task-risk-tag v-if="risk" :task="task" />
+					<span v-else-if="!deadlines">{{ priorityLabel(task.priority) }}</span>
 					<span v-if="deadlines && task.plannedStartAt">{{ formatListDate(task.plannedStartAt) }}</span>
 					<span v-if="task.deadlineAt">{{ formatListDate(task.deadlineAt) }}</span>
 				</base-flex>
@@ -90,6 +89,27 @@ const handleOpen = (taskId: string) => {
 		flex-shrink: 0;
 		color: var(--mt-color-gray-500);
 		font-size: map.get($font-sizes, 8);
+	}
+}
+
+/* Телефон: название во всю ширину, срок и метки — строкой ниже */
+@media (max-width: 640px) {
+	.dashboard-task-list {
+		padding: map.get($spacers, 4);
+	}
+
+	/* base-flex задаёт раскладку inline-стилем, поэтому нужен !important */
+	.dashboard-task-list__item > .base-flex {
+		flex-wrap: wrap !important;
+		row-gap: map.get($spacers, 1) !important;
+	}
+
+	.dashboard-task-list__title {
+		flex-basis: 100%;
+	}
+
+	.dashboard-task-list__meta {
+		gap: map.get($spacers, 3) !important;
 	}
 }
 </style>

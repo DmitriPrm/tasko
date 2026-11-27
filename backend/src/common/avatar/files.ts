@@ -27,7 +27,10 @@ function removeUserFiles(userId: string) {
 export function installAvatarFile(userId: string, sourcePath: string) {
 	ensureDir();
 	removeUserFiles(userId);
-	const ext = path.extname(sourcePath).replace(".", "").toLowerCase() === "jpeg" ? "jpg" : path.extname(sourcePath).replace(".", "").toLowerCase();
+	const ext =
+		path.extname(sourcePath).replace(".", "").toLowerCase() === "jpeg"
+			? "jpg"
+			: path.extname(sourcePath).replace(".", "").toLowerCase();
 	const file = `${userId}.${ext}`;
 	copyFileSync(sourcePath, path.join(AVATAR_DIR, file));
 	return file;

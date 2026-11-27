@@ -17,6 +17,45 @@ services:
       timeout: 5s
       retries: 10
 
+  # API (NestJS). При старте применяет миграции и, если SEED_DEMO=true, демо-данные.
+  # Swagger: http://localhost:3100/docs (или через интерфейс: http://localhost:8080/docs)
+  api:
+    build: ./backend
+    container_name: tasko-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tasko:tasko@postgres:5432/tasko?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
+      JWT_ACCESS_TTL: 2h
+      JWT_REFRESH_TTL: 7d
+      FRONTEND_URL: http://localhost:${WEB_PORT:-8080}
+      PORT: 3000
+      SEED_DEMO: ${SEED_DEMO:-true}
+      DEADLINE_REMINDER_HOURS: 24
+      # Сервис прогноза поднимается профилем ml; без него прогноз считается по правилам
+      ML_SERVICE_URL: http://ml:8001
+      ML_TIMEOUT_MS: 3000
+      SMTP_HOST: ${SMTP_HOST:-}
+    ports:
+      - "${API_PORT:-3100}:3000"
+    volumes:
+      # Аватары и вложения переживают пересборку контейнера
+      - api_storage:/app/storage
+
+  # Интерфейс (Vue, раздаётся nginx): http://localhost:8080
+  web:
+    build: ./frontend
+    container_name: tasko-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
   # Необязательно: локальный SMTP для разработки (письма видны на http://localhost:8025).
   # В .env бэкенда: SMTP_HOST=localhost, SMTP_PORT=1025
   mailpit:
@@ -28,5 +67,18 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Необязательно: сервис прогноза (docker compose --profile ml up -d ml).
+  # Модели берутся из ./ml/models — сначала обучите их, см. ml/README.md
+  ml:
+    build: ./ml
+    container_name: tasko-ml
+    restart: unless-stopped
+    profiles: ["ml"]
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ml/models:/app/models:ro
+
 volumes:
   postgres_data:
+  api_storage:

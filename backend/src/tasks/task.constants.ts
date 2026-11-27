@@ -13,3 +13,26 @@ export const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 	[TaskStatus.DONE]: targets(TaskStatus.DONE),
 	[TaskStatus.CANCELLED]: targets(TaskStatus.CANCELLED),
 };
+
+/**
+ * Строгая схема из спецификации: К выполнению → В работе → На проверке → Готово,
+ * с возвратами на доработку и отменой с любого шага. Включается в системных настройках.
+ */
+export const STRICT_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
+	[TaskStatus.TODO]: [TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED],
+	[TaskStatus.IN_PROGRESS]: [TaskStatus.REVIEW, TaskStatus.TODO, TaskStatus.CANCELLED],
+	[TaskStatus.REVIEW]: [TaskStatus.DONE, TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED],
+	[TaskStatus.DONE]: [TaskStatus.IN_PROGRESS],
+	[TaskStatus.CANCELLED]: [TaskStatus.TODO],
+};
+
+export function allowedTransitions(from: TaskStatus, strict: boolean) {
+	return (strict ? STRICT_TRANSITIONS : TASK_TRANSITIONS)[from];
+}
+
+const STARTED_STATUSES: TaskStatus[] = [TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.DONE];
+
+/** Задача уже была в работе: её нельзя удалить, только отменить */
+export function isTaskStarted(task: { status: TaskStatus; actualStartAt: Date | null }) {
+	return Boolean(task.actualStartAt) || STARTED_STATUSES.includes(task.status);
+}

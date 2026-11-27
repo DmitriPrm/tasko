@@ -3,7 +3,6 @@ import { CircleCheck, Close, Expand, Fold, Folder, Grid, PieChart, Setting, Star
 import { computed, onMounted, watch, type Component } from "vue";
 import { useRoute } from "vue-router";
 
-import { SETTINGS_CATEGORIES } from "@/pages/settings/settingsCategories";
 import BaseLogo from "@/shared/ui/logo/BaseLogo.vue";
 import { translate } from "@/shared/lib/theming/i18n/translate";
 import { useAuthStore } from "@/store/auth";
@@ -18,7 +17,7 @@ const layoutStore = useLayoutStore();
 const localeStore = useLocaleStore();
 
 const items = computed(() => {
-	localeStore.locale;
+	void localeStore.locale; // пересчитать при смене языка
 	const list: { name: string; label: string; icon: Component }[] = [
 		{ name: "dashboard", label: translate("nav.dashboard"), icon: Grid },
 		{ name: "tasks", label: translate("nav.tasks"), icon: CircleCheck },
@@ -29,9 +28,8 @@ const items = computed(() => {
 		list.push({ name: "analytics", label: translate("nav.analytics"), icon: PieChart });
 	}
 
-	if (authStore.hasPermission("SETTINGS_GENERAL") || authStore.hasPermission("SETTINGS_PERMISSIONS")) {
-		list.push({ name: "settings", label: translate("nav.settings"), icon: Setting });
-	}
+	// В настройках есть личные разделы, поэтому пункт виден всем
+	list.push({ name: "settings", label: translate("nav.settings"), icon: Setting });
 
 	if (authStore.hasPermission("USERS_VIEW")) {
 		list.push({ name: "users", label: translate("nav.users"), icon: User });
@@ -55,7 +53,7 @@ const isItemActive = (name: string) => {
 	if (name === "projects") return route.name === "projects" || route.name === "project";
 	if (name === "tasks") return route.name === "tasks";
 	if (name === "settings") {
-		return route.name === "settings" || SETTINGS_CATEGORIES.some((item) => item.routeName === route.name);
+		return route.name === "settings";
 	}
 	return route.name === name;
 };
@@ -198,11 +196,18 @@ $collapsed: 76px;
 		width: min(320px, 86vw);
 		height: 100dvh;
 		transform: translateX(-100%);
-		box-shadow: var(--mt-shadow-pop);
+		/* Закрытое меню не отбрасывает тень на край страницы и недоступно с клавиатуры */
+		visibility: hidden;
+		transition:
+			transform 0.25s var(--mt-ease),
+			visibility 0s linear 0.25s;
 	}
 
 	&--open {
 		transform: translateX(0);
+		visibility: visible;
+		box-shadow: var(--mt-shadow-pop);
+		transition: transform 0.25s var(--mt-ease);
 	}
 
 	&__top {

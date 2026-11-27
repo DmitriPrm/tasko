@@ -22,7 +22,7 @@ export const PERMISSIONS = [
 	{ code: "COMMENTS_CREATE", group: "communication" },
 	{ code: "ANALYTICS_VIEW", group: "communication" },
 	{ code: "NOTIFICATIONS_VIEW", group: "communication" },
-	{ code: "SETTINGS_GENERAL", group: "settings" },
+	{ code: "SETTINGS_SYSTEM", group: "settings" },
 	{ code: "SETTINGS_PERMISSIONS", group: "settings" },
 ] as const;
 
@@ -36,6 +36,7 @@ const ADMIN_ONLY: PermissionCode[] = [
 	"USERS_CREATE",
 	"USERS_BLOCK",
 	"SETTINGS_PERMISSIONS",
+	"SETTINGS_SYSTEM",
 ];
 
 const EXECUTOR: PermissionCode[] = [
@@ -55,7 +56,6 @@ const EXECUTOR: PermissionCode[] = [
 	"COMMENTS_CREATE",
 	"ANALYTICS_VIEW",
 	"NOTIFICATIONS_VIEW",
-	"SETTINGS_GENERAL",
 ];
 
 export const ROLE_DEFAULTS: Record<SystemRole, PermissionCode[]> = {

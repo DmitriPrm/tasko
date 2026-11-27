@@ -19,6 +19,19 @@ export const router = createRouter({
 			meta: { public: true },
 		},
 		{
+			path: "/forgot-password",
+			name: "forgot-password",
+			component: () => import("@/pages/auth/ForgotPasswordPage.vue"),
+			meta: { public: true },
+		},
+		{
+			// open: ссылка из письма работает и в браузере, где кто-то уже вошёл
+			path: "/reset-password/:token",
+			name: "reset-password",
+			component: () => import("@/pages/auth/ResetPasswordPage.vue"),
+			meta: { open: true },
+		},
+		{
 			path: "/verify-email/:token",
 			name: "verify-email",
 			component: () => import("@/pages/auth/VerifyEmailPage.vue"),
@@ -66,23 +79,12 @@ export const router = createRouter({
 					component: () => import("@/pages/analytics/AnalyticsPage.vue"),
 					meta: { permission: "ANALYTICS_VIEW" },
 				},
+				// Личные разделы доступны всем, системные проверяются внутри страницы по правам
+				{ path: "settings/general", redirect: { name: "settings", params: { section: "appearance" } } },
 				{
-					path: "settings",
+					path: "settings/:section?",
 					name: "settings",
 					component: () => import("@/pages/settings/SettingsPage.vue"),
-					meta: { anyPermission: ["SETTINGS_GENERAL", "SETTINGS_PERMISSIONS"] },
-				},
-				{
-					path: "settings/general",
-					name: "settings-general",
-					component: () => import("@/pages/settings/SettingsCategoryPage.vue"),
-					meta: { permission: "SETTINGS_GENERAL", parent: "settings" },
-				},
-				{
-					path: "settings/rights",
-					name: "settings-rights",
-					component: () => import("@/pages/settings/SettingsCategoryPage.vue"),
-					meta: { permission: "SETTINGS_PERMISSIONS", parent: "settings" },
 				},
 				{
 					path: "notifications",

@@ -4,6 +4,7 @@ import { SystemRole, TaskStatus } from "@prisma/client";
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { toProjectDto } from "../projects/project.mapper";
+import { latestPredictionInclude } from "../predictions/predictions.service";
 import { buildForecast } from "../tasks/forecast";
 import { toTaskDto } from "../tasks/task.mapper";
 
@@ -19,9 +20,8 @@ export class DashboardService {
 
 		const openWhere = {
 			status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-			...(user.systemRole === SystemRole.ADMIN
-				? {}
-				: { project: { members: { some: { userId: user.id } } } }),
+			isCompleted: false,
+			...(user.systemRole === SystemRole.ADMIN ? {} : { project: { members: { some: { userId: user.id } } } }),
 		};
 
 		const [projects, myTasks, upcoming, openTasks] = await Promise.all([
@@ -45,6 +45,7 @@ export class DashboardService {
 					assignee: true,
 					project: { select: { id: true, name: true, status: true } },
 					_count: { select: { comments: true, subtasks: true } },
+					...latestPredictionInclude,
 				},
 				orderBy: { deadlineAt: "asc" },
 				take: 8,
@@ -53,34 +54,46 @@ export class DashboardService {
 				where: {
 					deadlineAt: { not: null },
 					status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
-					project:
-						user.systemRole === SystemRole.ADMIN
-							? undefined
-							: { members: { some: { userId: user.id } } },
+					project: user.systemRole === SystemRole.ADMIN ? undefined : { members: { some: { userId: user.id } } },
 				},
 				include: {
 					author: true,
 					assignee: true,
 					project: { select: { id: true, name: true, status: true } },
 					_count: { select: { comments: true, subtasks: true } },
+					...latestPredictionInclude,
 				},
 				orderBy: { deadlineAt: "asc" },
 				take: 6,
 			}),
-			this.prisma.task.findMany({ where: openWhere }),
+			this.prisma.task.findMany({
+				where: openWhere,
+				include: {
+					author: true,
+					assignee: true,
+					project: { select: { id: true, name: true, status: true } },
+					_count: { select: { comments: true, subtasks: true } },
+					...latestPredictionInclude,
+				},
+			}),
 		]);
 
 		const now = new Date();
+		const withForecast = openTasks.map((task) => ({ task, forecast: buildForecast(task, now) }));
+		const risky = withForecast
+			.filter((item) => item.forecast.riskLevel === "HIGH")
+			.sort((a, b) => b.forecast.riskProbability - a.forecast.riskProbability);
 
 		return {
 			summary: {
 				active: openTasks.length,
 				overdue: openTasks.filter((task) => task.deadlineAt && task.deadlineAt < now).length,
-				highRisk: openTasks.filter((task) => buildForecast(task, now).riskLevel === "HIGH").length,
+				highRisk: risky.length,
 			},
 			projects: projects.map((project) => toProjectDto(project)),
 			myTasks: myTasks.map(toTaskDto),
 			upcomingDeadlines: upcoming.map(toTaskDto),
+			riskyTasks: risky.slice(0, 6).map((item) => toTaskDto(item.task)),
 		};
 	}
 }

@@ -32,12 +32,7 @@ export function assertColumnWidths(value: unknown): Record<string, number> {
 			throw new BadRequestException("Некорректный ключ колонки");
 		}
 
-		if (
-			typeof width !== "number" ||
-			!Number.isInteger(width) ||
-			width < MIN_COLUMN_WIDTH ||
-			width > MAX_COLUMN_WIDTH
-		) {
+		if (typeof width !== "number" || !Number.isInteger(width) || width < MIN_COLUMN_WIDTH || width > MAX_COLUMN_WIDTH) {
 			throw new BadRequestException("Некорректная ширина колонки");
 		}
 

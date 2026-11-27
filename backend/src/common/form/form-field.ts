@@ -1,11 +1,4 @@
-export type FormFieldType =
-	| "text"
-	| "textarea"
-	| "select"
-	| "date"
-	| "datetime"
-	| "checkbox"
-	| "password";
+export type FormFieldType = "text" | "textarea" | "select" | "date" | "datetime" | "checkbox" | "password";
 
 export interface FormPossibleValue {
 	id: string;

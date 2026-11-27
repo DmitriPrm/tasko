@@ -6,7 +6,7 @@ import type { PermissionMatrix, SystemRole } from "@/shared/api/v0/schemas";
 import { useFetch } from "@/shared/lib/composable/useFetch";
 import { roleLabel } from "@/shared/lib/helpers/labels";
 import { translate } from "@/shared/lib/theming/i18n/translate";
-import { Search } from "@/shared/ui/icon/icons";
+import { Search as SearchIcon } from "@/shared/ui/icon/icons";
 
 type Grants = Record<string, Record<string, boolean>>;
 
@@ -63,10 +63,7 @@ const groups = computed(() => {
 });
 
 const changesCount = computed(() =>
-	roles.value.reduce(
-		(sum, role) => sum + items.value.filter((item) => isChanged(role, item.code)).length,
-		0,
-	),
+	roles.value.reduce((sum, role) => sum + items.value.filter((item) => isChanged(role, item.code)).length, 0),
 );
 
 const enabledCount = (role: string) => Object.values(grants.value[role] ?? {}).filter(Boolean).length;
@@ -126,7 +123,7 @@ const handleSave = async () => {
 				:placeholder="translate('settings.searchRights')"
 			>
 				<template #prefix>
-					<el-icon :size="16"><search /></el-icon>
+					<el-icon :size="16"><search-icon /></el-icon>
 				</template>
 			</el-input>
 			<p class="settings-rights__hint">{{ translate("settings.rightsHint") }}</p>
@@ -147,7 +144,9 @@ const handleSave = async () => {
 				<section v-for="group in groups" :key="group.id" class="settings-rights__group">
 					<div class="settings-rights__row settings-rights__row--group">
 						<button class="settings-rights__toggle" type="button" @click="handleToggleGroup(group.id)">
-							<span class="settings-rights__chevron" :class="{ 'settings-rights__chevron--open': isOpen(group.id) }">›</span>
+							<span class="settings-rights__chevron" :class="{ 'settings-rights__chevron--open': isOpen(group.id) }"
+								>›</span
+							>
 							<strong>{{ group.title }}</strong>
 							<span class="settings-rights__count">{{ group.rows.length }}</span>
 						</button>
@@ -157,17 +156,15 @@ const handleSave = async () => {
 								:indeterminate="groupState(role, group.rows).indeterminate"
 								:disabled="groupState(role, group.rows).disabled"
 								:title="translate('settings.toggleGroup')"
-								@change="(value) => handleToggleRoleInGroup(role, group.rows, value === true)"
+								@change="
+									(value: string | number | boolean) => handleToggleRoleInGroup(role, group.rows, value === true)
+								"
 							/>
 						</span>
 					</div>
 
 					<template v-if="isOpen(group.id)">
-						<div
-							v-for="row in group.rows"
-							:key="row.code"
-							class="settings-rights__row settings-rights__row--item"
-						>
+						<div v-for="row in group.rows" :key="row.code" class="settings-rights__row settings-rights__row--item">
 							<span class="settings-rights__label">{{ row.label }}</span>
 							<span v-for="role in roles" :key="role" class="settings-rights__cell">
 								<el-switch
@@ -175,7 +172,7 @@ const handleSave = async () => {
 									:disabled="isLocked(role, row.code)"
 									:title="isLocked(role, row.code) ? translate('settings.locked') : undefined"
 									:class="{ 'settings-rights__switch--changed': isChanged(role, row.code) }"
-									@change="(value) => setGrant(role, row.code, value === true)"
+									@change="(value: string | number | boolean) => setGrant(role, row.code, value === true)"
 								/>
 							</span>
 						</div>
@@ -185,7 +182,9 @@ const handleSave = async () => {
 		</el-skeleton>
 
 		<div v-if="changesCount" class="settings-rights__bar">
-			<span>{{ translate("settings.unsaved") }}: <strong>{{ changesCount }}</strong></span>
+			<span
+				>{{ translate("settings.unsaved") }}: <strong>{{ changesCount }}</strong></span
+			>
 			<base-flex :gap="3">
 				<base-button :disabled="isSaving" @click="handleReset">{{ translate("settings.reset") }}</base-button>
 				<base-button type="primary" :loading="isSaving" @click="handleSave">

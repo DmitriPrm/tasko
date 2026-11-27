@@ -61,4 +61,14 @@ export class ProjectAccessService {
 
 		return Boolean(membership);
 	}
+
+	/** Участник проекта, чья учётная запись не заблокирована */
+	async isActiveProjectMember(projectId: string, userId: string) {
+		const membership = await this.prisma.projectMember.findUnique({
+			where: { projectId_userId: { projectId, userId } },
+			include: { user: { select: { isActive: true } } },
+		});
+
+		return Boolean(membership?.user.isActive);
+	}
 }

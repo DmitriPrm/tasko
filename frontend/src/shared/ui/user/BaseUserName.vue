@@ -30,7 +30,9 @@ const router = useRouter();
 
 const label = computed(() => props.user?.fullName || props.name || "");
 const userId = computed(() => props.user?.id || props.user?.userId || "");
-const profileTo = computed(() => (props.link && userId.value ? { name: "profile", params: { id: userId.value } } : null));
+const profileTo = computed(() =>
+	props.link && userId.value ? { name: "profile", params: { id: userId.value } } : null,
+);
 
 const handleOpen = (event: MouseEvent) => {
 	if (!profileTo.value) return;

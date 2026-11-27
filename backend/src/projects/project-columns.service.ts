@@ -193,9 +193,7 @@ export class ProjectColumnsService {
 					});
 				}
 			} else if (tasksCount > 0) {
-				const ids = (await tx.task.findMany({ where: { columnId }, select: { id: true } })).map(
-					(task) => task.id,
-				);
+				const ids = (await tx.task.findMany({ where: { columnId }, select: { id: true } })).map((task) => task.id);
 				// Подзадачи удаляемых задач не должны блокировать удаление
 				await tx.task.updateMany({ where: { parentTaskId: { in: ids } }, data: { parentTaskId: null } });
 				await tx.task.deleteMany({ where: { id: { in: ids } } });

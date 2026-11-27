@@ -2,9 +2,14 @@
 
 ```
 [Vue SPA] --REST--> [NestJS API] --Prisma--> [PostgreSQL]
+                         |
+                         +--HTTP--> [ML-сервис FastAPI, ml/] (необязательно)
 ```
 
-ML-контур из спецификации отложен: отдельный FastAPI-сервис подключать после стабилизации CRUD.
+ML-сервис только отвечает на прогнозы по обученным моделям. Бэкенд (`src/predictions`) собирает сведения о задаче
+и истории исполнителя/проекта, вызывает `POST /predict`, сохраняет ответ в `task_predictions`, а версию модели — в
+`model_versions`. Карточки, аналитика и dashboard берут риск из последнего сохранённого прогноза; если его нет или
+сервис выключен (`ML_SERVICE_URL` пуст), используется оценка по правилам (`src/tasks/forecast.ts`).
 
 ## Frontend
 
@@ -19,7 +24,9 @@ ML-контур из спецификации отложен: отдельный
 
 ## Backend
 
-Модули NestJS: `auth`, `users`, `projects`, `tasks`, `comments`, `notifications`, `analytics`, `dashboard`.
+Модули NestJS: `auth`, `users`, `access` (права ролей), `invitations`, `projects`, `tasks` (задачи, подзадачи, зависимости), `attachments`, `comments`, `notifications` (в том числе ежечасные напоминания о сроке через `@nestjs/schedule`), `analytics`, `dashboard`, `predictions` (связь с ML-сервисом), `settings`, `table-layouts`, `avatars`, `mail`.
+
+Файлы (аватары, вложения) лежат в `backend/storage/`; в базе хранятся только метаданные.
 
 Глобально: JWT guard, wrap-interceptor `{ data }`, exception filter без stack trace.
 

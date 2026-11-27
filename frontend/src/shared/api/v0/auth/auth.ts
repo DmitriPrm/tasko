@@ -33,3 +33,27 @@ export const getMe = createGet({
 	path: "/auth/me",
 	type: ZWrapDTO(ZUser),
 });
+
+/** Сменить пароль; ответ — новые токены для текущей сессии (остальные отзываются) */
+export const changePassword = createPost({
+	path: "/auth/change-password",
+	type: ZWrapDTO(ZTokens),
+});
+
+/** Выйти на всех устройствах; текущая сессия получает новые токены */
+export const logoutAll = createPost({
+	path: "/auth/logout-all",
+	type: ZWrapDTO(ZTokens),
+});
+
+/** «Забыли пароль?»: ответ одинаковый для любого адреса */
+export const forgotPassword = createPost({
+	path: "/auth/forgot-password",
+	type: ZWrapDTO(ZSuccess),
+});
+
+/** Новый пароль по ссылке из письма */
+export const resetPassword = createPost({
+	path: "/auth/reset-password",
+	type: ZWrapDTO(ZSuccess),
+});

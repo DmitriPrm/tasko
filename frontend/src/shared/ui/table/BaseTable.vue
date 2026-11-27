@@ -11,6 +11,8 @@ export interface BaseTableColumn {
 	width?: string;
 	sortKey?: string;
 	sortable?: boolean;
+	/** Своё значение для сортировки, когда порядок не алфавитный (приоритет, статус) */
+	sortValue?: (row: any) => string | number | null | undefined;
 }
 
 const emit = defineEmits<{
@@ -28,6 +30,8 @@ const props = withDefaults(
 		loading?: boolean;
 		pageSize?: number;
 		rowKey?: string;
+		/** Текст пустой таблицы; по умолчанию «Нет данных» */
+		emptyText?: string;
 	}>(),
 	{
 		pageSize: 15,
@@ -72,6 +76,7 @@ const { fetch: saveLayout } = useFetch(baseApi.tableLayouts.saveTableLayout, "da
 const readPath = (row: any, path: string) => path.split(".").reduce<any>((acc, key) => acc?.[key], row);
 
 const sortValue = (row: any, column: BaseTableColumn) => {
+	if (column.sortValue) return column.sortValue(row) ?? "";
 	const raw = column.sortKey ? readPath(row, column.sortKey) : row[column.key];
 	if (raw && typeof raw === "object") {
 		return raw.fullName || raw.name || raw.title || "";
@@ -139,8 +144,7 @@ const handleSort = (column: BaseTableColumn) => {
 	page.value = 1;
 };
 
-const clampWidth = (width: number) =>
-	Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)));
+const clampWidth = (width: number) => Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.round(width)));
 
 const normalizeWidths = (value: Record<string, number> | undefined) => {
 	const next: Record<string, number> = {};
@@ -280,14 +284,10 @@ watch(layoutState, (layout) => {
 				</thead>
 				<tbody>
 					<tr v-if="!loading && !visibleRows.length">
-						<td class="base-table__empty" :colspan="columns.length">{{ translate("common.empty") }}</td>
+						<td class="base-table__empty" :colspan="columns.length">{{ emptyText || translate("common.empty") }}</td>
 					</tr>
-					<tr
-						v-for="row in visibleRows"
-						:key="String(row[rowKey])"
-						@click="() => handleRowClick(row)"
-					>
-						<td v-for="column in columns" :key="column.key">
+					<tr v-for="row in visibleRows" :key="String(row[rowKey])" @click="() => handleRowClick(row)">
+						<td v-for="column in columns" :key="column.key" :data-label="column.label">
 							<slot :name="column.key" :row="row">{{ row[column.key] ?? "—" }}</slot>
 						</td>
 					</tr>
@@ -304,12 +304,7 @@ watch(layoutState, (layout) => {
 						:model-value="selectedPageSize"
 						@change="(size: number) => handlePageSize(size)"
 					>
-						<el-option
-							v-for="size in pageSizeOptions"
-							:key="size"
-							:label="String(size)"
-							:value="size"
-						/>
+						<el-option v-for="size in pageSizeOptions" :key="size" :label="String(size)" :value="size" />
 					</el-select>
 				</base-flex>
 			</base-flex>
@@ -496,6 +491,74 @@ watch(layoutState, (layout) => {
 
 	&__size {
 		width: 96px;
+	}
+}
+
+/*
+ * Телефон: строки таблицы превращаются в карточки «подпись — значение» без горизонтальной прокрутки.
+ * Первая колонка (обычно название) — заголовок карточки.
+ */
+@media (max-width: 640px) {
+	.base-table__scroll {
+		overflow: visible;
+	}
+
+	.base-table__grid,
+	.base-table__grid tbody,
+	.base-table__grid tr,
+	.base-table__grid td {
+		display: block;
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	.base-table__grid colgroup,
+	.base-table__grid thead {
+		display: none;
+	}
+
+	.base-table__grid tbody tr {
+		padding: 12px 16px;
+		border-bottom: 1px solid var(--mt-color-gray-100);
+	}
+
+	.base-table__grid tbody td {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 3px 0 !important;
+		border: 0 !important;
+		text-align: right;
+		white-space: normal !important;
+	}
+
+	.base-table__grid tbody td::before {
+		content: attr(data-label);
+		flex-shrink: 0;
+		color: var(--mt-color-gray-500);
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-align: left;
+	}
+
+	.base-table__grid tbody td:first-child {
+		margin-bottom: 4px;
+		font-weight: 600;
+		text-align: left;
+	}
+
+	.base-table__grid tbody td:first-child::before,
+	.base-table__grid tbody td.base-table__empty::before {
+		content: none;
+	}
+
+	.base-table__grid tbody td.base-table__empty {
+		justify-content: center;
+	}
+
+	.base-table__pager {
+		justify-content: center;
 	}
 }
 </style>

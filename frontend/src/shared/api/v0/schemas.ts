@@ -11,6 +11,7 @@ export const ZNotificationType = z.enum([
 	"DEADLINE_CHANGED",
 	"STATUS_CHANGED",
 	"DEADLINE_APPROACHING",
+	"HIGH_RISK",
 	"PROJECT_INVITATION",
 ]);
 
@@ -29,15 +30,7 @@ export const ZUser = z.object({
 	permissions: z.array(z.string()).optional(),
 });
 
-export const ZProfileFieldType = z.enum([
-	"TEXT",
-	"TEXTAREA",
-	"NUMBER",
-	"DATE",
-	"CHECKBOX",
-	"SELECT",
-	"MULTI_SELECT",
-]);
+export const ZProfileFieldType = z.enum(["TEXT", "TEXTAREA", "NUMBER", "DATE", "CHECKBOX", "SELECT", "MULTI_SELECT"]);
 
 export const ZProfileField = z.object({
 	id: z.string(),
@@ -51,6 +44,7 @@ export const ZProfileField = z.object({
 export const ZProfileSection = z.object({
 	id: z.string(),
 	title: z.string(),
+	icon: z.string().nullable().optional(),
 	position: z.number(),
 	fields: z.array(ZProfileField),
 });
@@ -58,6 +52,7 @@ export const ZProfileSection = z.object({
 export const ZProfile = ZUser.extend({
 	canEdit: z.boolean(),
 	canEditRights: z.boolean(),
+	canEditAvatar: z.boolean().optional(),
 	permissions: z.array(z.string()),
 	sections: z.array(ZProfileSection),
 });
@@ -142,6 +137,45 @@ export const ZProjectColumn = z.object({
 	tasksCount: z.number().optional().default(0),
 });
 
+export const ZForecastFactor = z.object({
+	feature: z.string(),
+	label: z.string(),
+	impact: z.number(),
+	value: z.union([z.string(), z.number()]).nullable().optional(),
+});
+
+/** Прогноз задачи: source ML — обученная модель, RULES — простые правила, пока модели нет */
+export const ZTaskForecast = z.object({
+	source: z.enum(["ML", "RULES"]).default("RULES"),
+	durationDays: z.number(),
+	durationHours: z.number().optional(),
+	riskProbability: z.number(),
+	riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
+	calculatedAt: z.string(),
+	inputs: z.array(z.object({ code: z.string(), value: z.string() })),
+	factors: z.array(z.string()),
+	riskFactors: z.array(ZForecastFactor).default([]),
+	durationFactors: z.array(ZForecastFactor).default([]),
+	models: z.object({ duration: z.string().nullable(), risk: z.string().nullable() }).nullable().optional(),
+});
+
+export const ZTaskPrediction = z.object({
+	forecast: ZTaskForecast,
+	mlEnabled: z.boolean(),
+	refreshed: z.boolean().optional(),
+	history: z.array(
+		z.object({
+			id: z.string(),
+			trigger: z.enum(["CREATED", "UPDATED", "MANUAL"]),
+			durationHours: z.number().nullable(),
+			riskProbability: z.number().nullable(),
+			durationModel: z.string().nullable(),
+			riskModel: z.string().nullable(),
+			createdAt: z.string(),
+		}),
+	),
+});
+
 export const ZTask = z.object({
 	id: z.string(),
 	projectId: z.string(),
@@ -174,17 +208,12 @@ export const ZTask = z.object({
 		.optional(),
 	commentsCount: z.number(),
 	subtasksCount: z.number(),
+	isStarted: z.boolean().optional(),
+	parentTask: z.object({ id: z.string(), title: z.string() }).nullable().optional(),
+	openBlockersCount: z.number().optional(),
+	attachmentsCount: z.number().optional(),
 	canEdit: z.boolean().optional(),
-	forecast: z
-		.object({
-			durationDays: z.number(),
-			riskProbability: z.number(),
-			riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
-			calculatedAt: z.string(),
-			inputs: z.array(z.object({ code: z.string(), value: z.string() })),
-			factors: z.array(z.string()),
-		})
-		.optional(),
+	forecast: ZTaskForecast.optional(),
 });
 
 export const ZComment = z.object({
@@ -194,6 +223,10 @@ export const ZComment = z.object({
 	body: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
+	/** Текст исправлен после публикации */
+	edited: z.boolean().optional(),
+	canEdit: z.boolean().optional(),
+	canDelete: z.boolean().optional(),
 	author: ZUser,
 });
 
@@ -293,7 +326,45 @@ export const ZAnalyticsOverview = z.object({
 	medianDurationHours: z.number(),
 });
 
+export const ZRiskAnalytics = z.object({
+	byRisk: z.object({ LOW: z.number(), MEDIUM: z.number(), HIGH: z.number() }),
+	tasks: z.array(
+		z.object({
+			id: z.string(),
+			title: z.string(),
+			status: ZTaskStatus,
+			deadlineAt: z.string().nullable(),
+			assignee: ZUser.nullable(),
+			riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
+			riskProbability: z.number(),
+			durationHours: z.number(),
+			source: z.enum(["ML", "RULES"]),
+		}),
+	),
+	durations: z.object({
+		summary: z.object({
+			closed: z.number(),
+			withPrediction: z.number(),
+			maeHours: z.number().nullable(),
+			avgPlannedHours: z.number().nullable(),
+			avgPredictedHours: z.number().nullable(),
+			avgActualHours: z.number().nullable(),
+		}),
+		rows: z.array(
+			z.object({
+				taskId: z.string(),
+				title: z.string(),
+				plannedHours: z.number().nullable(),
+				predictedHours: z.number().nullable(),
+				actualHours: z.number().nullable(),
+				errorHours: z.number().nullable(),
+			}),
+		),
+	}),
+});
+
 export const ZWorkloadItem = z.object({
+	forecastHours: z.number().optional(),
 	userId: z.string(),
 	fullName: z.string(),
 	email: z.string(),
@@ -312,11 +383,74 @@ export const ZDashboard = z.object({
 	projects: z.array(ZProject),
 	myTasks: z.array(ZTask),
 	upcomingDeadlines: z.array(ZTask),
+	riskyTasks: z.array(ZTask).default([]),
+});
+
+export const ZSystemSettings = z.object({
+	risk: z.object({
+		mediumThreshold: z.number(),
+		highThreshold: z.number(),
+		alertsEnabled: z.boolean(),
+		alertManagers: z.boolean(),
+	}),
+	deadlines: z.object({ reminderHours: z.number() }),
+	ml: z.object({ enabled: z.boolean() }),
+	registration: z.object({
+		open: z.boolean(),
+		allowedDomains: z.array(z.string()),
+		defaultRole: z.enum(["EXECUTOR", "MANAGER"]),
+	}),
+	attachments: z.object({ maxSizeMb: z.number(), allowedTypes: z.array(z.string()) }),
+	projects: z.object({ defaultView: z.enum(["board", "list"]), strictWorkflow: z.boolean() }),
+});
+
+export const ZPublicSettings = z.object({
+	risk: z.object({ mediumThreshold: z.number(), highThreshold: z.number() }),
+	attachments: z.object({ maxSizeMb: z.number(), allowedTypes: z.array(z.string()) }),
+	projects: z.object({ defaultView: z.enum(["board", "list"]), strictWorkflow: z.boolean() }),
+	registration: z.object({ open: z.boolean(), allowedDomains: z.array(z.string()) }),
+});
+
+const ZMlModel = z.object({
+	version: z.string(),
+	algorithm: z.string(),
+	trainedAt: z.string().nullable().optional(),
+	sampleSize: z.number().nullable().optional(),
+	dataSource: z.string().nullable().optional(),
+	metrics: z.record(z.string(), z.number()).nullable().optional(),
+});
+
+export const ZMlModels = z.object({ duration: ZMlModel.nullable(), risk: ZMlModel.nullable() });
+
+export const ZMlStatus = z.object({
+	configured: z.boolean().optional(),
+	switchedOn: z.boolean().optional(),
+	enabled: z.boolean(),
+	available: z.boolean(),
+	models: ZMlModels.nullable(),
+});
+
+export const ZMlReload = z.object({ reloaded: z.boolean(), models: ZMlModels.nullable() });
+export const ZMlRecompute = z.object({ total: z.number(), refreshed: z.number() });
+
+const ZChannelPrefs = z.object({ inApp: z.boolean(), email: z.boolean() });
+
+export const ZUserPreferences = z.object({
+	notifications: z.record(ZNotificationType, ZChannelPrefs),
+	startPage: z.enum(["dashboard", "tasks", "projects"]),
+	projectView: z.enum(["board", "list"]).nullable(),
+	showClosedTasks: z.boolean(),
 });
 
 export const ZTableLayout = z.object({
 	code: z.string(),
 	widths: z.record(z.string(), z.number()),
+});
+
+export const ZTaskRemoveResult = z.object({
+	success: z.boolean(),
+	/** true — задача уже была в работе и не удалена, а отменена */
+	cancelled: z.boolean(),
 });
 
 export const ZSuccess = z.object({
@@ -337,8 +471,17 @@ export type Project = z.infer<typeof ZProject>;
 export type ProjectMember = z.infer<typeof ZProjectMember>;
 export type Tag = z.infer<typeof ZTag>;
 export type Task = z.infer<typeof ZTask>;
+export type SystemSettings = z.infer<typeof ZSystemSettings>;
+export type UserPreferences = z.infer<typeof ZUserPreferences>;
+export type PublicSettings = z.infer<typeof ZPublicSettings>;
+export type MlStatus = z.infer<typeof ZMlStatus>;
+export type WorkloadItem = z.infer<typeof ZWorkloadItem>;
+export type RiskAnalytics = z.infer<typeof ZRiskAnalytics>;
+export type TaskForecast = z.infer<typeof ZTaskForecast>;
+export type TaskPrediction = z.infer<typeof ZTaskPrediction>;
 export type ProjectColumn = z.infer<typeof ZProjectColumn>;
 export type Comment = z.infer<typeof ZComment>;
+export type TaskComment = Comment;
 export type Invitation = z.infer<typeof ZInvitation>;
 export type InvitationPreview = z.infer<typeof ZInvitationPreview>;
 export type InvitationCreated = z.infer<typeof ZInvitationCreated>;
@@ -349,3 +492,38 @@ export type TaskStatus = z.infer<typeof ZTaskStatus>;
 export type TaskPriority = z.infer<typeof ZTaskPriority>;
 export type TaskType = z.infer<typeof ZTaskType>;
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type TaskHistory = z.infer<typeof ZTaskHistory>;
+
+/** Короткая карточка задачи для подзадач и связей */
+export const ZBriefTask = z.object({
+	id: z.string(),
+	title: z.string(),
+	status: ZTaskStatus,
+	isCompleted: z.boolean(),
+	deadlineAt: z.string().nullable(),
+	assignee: ZUser.nullable(),
+});
+
+const ZDependencyItem = z.object({ dependencyId: z.string(), task: ZBriefTask });
+
+export const ZTaskDependencies = z.object({
+	blockedBy: z.array(ZDependencyItem),
+	blocks: z.array(ZDependencyItem),
+	related: z.array(ZDependencyItem),
+});
+
+export type BriefTask = z.infer<typeof ZBriefTask>;
+export type TaskDependencies = z.infer<typeof ZTaskDependencies>;
+export type DependencyKind = "DEPENDS_ON" | "BLOCKS" | "RELATED";
+
+export const ZAttachment = z.object({
+	id: z.string(),
+	taskId: z.string(),
+	originalName: z.string(),
+	mimeType: z.string(),
+	sizeBytes: z.number(),
+	createdAt: z.string(),
+	uploader: ZUser,
+});
+
+export type Attachment = z.infer<typeof ZAttachment>;

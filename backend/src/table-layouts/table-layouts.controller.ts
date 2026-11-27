@@ -19,11 +19,7 @@ export class TableLayoutsController {
 	}
 
 	@Put(":code")
-	save(
-		@CurrentUser() user: AuthUser,
-		@Param("code", TableCodePipe) code: string,
-		@Body() dto: SaveTableLayoutDto,
-	) {
+	save(@CurrentUser() user: AuthUser, @Param("code", TableCodePipe) code: string, @Body() dto: SaveTableLayoutDto) {
 		return this.tableLayoutsService.save(user, code, dto.widths);
 	}
 }

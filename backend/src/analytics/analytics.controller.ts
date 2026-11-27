@@ -21,6 +21,12 @@ export class AnalyticsController {
 		return this.analyticsService.overview(user, projectId);
 	}
 
+	@Get("risks")
+	async risks(@CurrentUser() user: AuthUser, @Param("id") projectId: string) {
+		await this.access.assert(user, "ANALYTICS_VIEW");
+		return this.analyticsService.risks(user, projectId);
+	}
+
 	@Get("workload")
 	async workload(@CurrentUser() user: AuthUser, @Param("id") projectId: string) {
 		await this.access.assert(user, "ANALYTICS_VIEW");

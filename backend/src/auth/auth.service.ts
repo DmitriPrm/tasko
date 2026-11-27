@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+	BadRequestException,
+	ConflictException,
+	ForbiddenException,
+	Injectable,
+	UnauthorizedException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { Prisma, SystemRole, User } from "@prisma/client";
@@ -9,14 +15,18 @@ import { saveGeneratedAvatar } from "../common/avatar/files";
 import { generateToken, hashToken } from "../common/security/tokens";
 import { InvitationsService } from "../invitations/invitations.service";
 import { MailService } from "../mail/mail.service";
-import { verifyEmailMail } from "../mail/mail.templates";
+import { passwordResetMail, verifyEmailMail } from "../mail/mail.templates";
 import { PrismaService } from "../prisma/prisma.service";
+import { SystemSettingsService } from "../system-settings/system-settings.service";
 import { toUserDto } from "../users/user.mapper";
 import { AuthUser, JwtPayload } from "./auth.types";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 
 const VERIFICATION_TTL_HOURS = 24;
+
+/** Сколько живёт ссылка для сброса пароля */
+const RESET_TTL_MINUTES = 60;
 
 @Injectable()
 export class AuthService {
@@ -27,6 +37,7 @@ export class AuthService {
 		private readonly access: AccessService,
 		private readonly mail: MailService,
 		private readonly invitations: InvitationsService,
+		private readonly settings: SystemSettingsService,
 	) {}
 
 	async login(dto: LoginDto) {
@@ -41,7 +52,7 @@ export class AuthService {
 		}
 
 		return {
-			...this.issueTokens(user.id, user.email),
+			...this.issueTokens(user),
 			user: {
 				...toUserDto(user),
 				permissions: await this.access.listEffective(user),
@@ -59,6 +70,18 @@ export class AuthService {
 		const invitation = dto.inviteToken ? await this.invitations.findActiveByToken(dto.inviteToken) : null;
 		const verifiedByInvitation = Boolean(invitation && invitation.email.toLowerCase() === email);
 
+		// Правила регистрации задаёт администратор; приглашённым они не мешают
+		const rules = this.settings.section("registration");
+		if (!verifiedByInvitation) {
+			if (!rules.open) throw new ForbiddenException("Регистрация закрыта. Попросите приглашение у администратора");
+			const domain = email.split("@")[1] ?? "";
+			if (rules.allowedDomains.length && !rules.allowedDomains.includes(domain)) {
+				throw new ForbiddenException(
+					`Регистрация доступна только для адресов ${rules.allowedDomains.map((item) => `@${item}`).join(", ")}`,
+				);
+			}
+		}
+
 		let created: User;
 		try {
 			created = await this.prisma.user.create({
@@ -66,7 +89,7 @@ export class AuthService {
 					email,
 					fullName: dto.fullName.trim(),
 					passwordHash: await bcrypt.hash(dto.password, 10),
-					systemRole: SystemRole.EXECUTOR,
+					systemRole: rules.defaultRole === "MANAGER" ? SystemRole.MANAGER : SystemRole.EXECUTOR,
 					emailVerifiedAt: verifiedByInvitation ? new Date() : null,
 				},
 			});
@@ -92,7 +115,7 @@ export class AuthService {
 		}
 
 		return {
-			...this.issueTokens(user.id, user.email),
+			...this.issueTokens(user),
 			user: {
 				...toUserDto(user),
 				permissions: await this.access.listEffective(user),
@@ -115,6 +138,53 @@ export class AuthService {
 			this.prisma.emailVerificationToken.deleteMany({ where: { userId: record.userId } }),
 		]);
 
+		return { success: true };
+	}
+
+	/**
+	 * «Забыли пароль?»: ответ одинаковый, есть такой адрес или нет — по нему нельзя узнать,
+	 * кто зарегистрирован. Письмо уходит только активному пользователю.
+	 */
+	async requestPasswordReset(rawEmail: string) {
+		const email = rawEmail.trim().toLowerCase();
+		const user = await this.prisma.user.findUnique({ where: { email } });
+		if (user?.isActive) {
+			const { token, hash } = generateToken();
+			await this.prisma.$transaction([
+				this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+				this.prisma.passwordResetToken.create({
+					data: { userId: user.id, tokenHash: hash, expiresAt: new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000) },
+				}),
+			]);
+			const frontendUrl = (this.configService.get<string>("FRONTEND_URL") || "http://localhost:5173").replace(
+				/\/$/,
+				"",
+			);
+			await this.mail.send({
+				to: user.email,
+				...passwordResetMail(user.fullName, `${frontendUrl}/reset-password/${token}`, RESET_TTL_MINUTES),
+			});
+		}
+		return { success: true };
+	}
+
+	/** Новый пароль по ссылке из письма: ссылка одноразовая, все старые сессии завершаются */
+	async resetPassword(token: string, newPassword: string) {
+		const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash: hashToken(token) } });
+		if (!record || record.expiresAt < new Date()) {
+			throw new BadRequestException("Ссылка недействительна или устарела. Запросите сброс пароля ещё раз");
+		}
+		const user = await this.prisma.user.findUnique({ where: { id: record.userId } });
+		if (!user || !user.isActive) {
+			throw new BadRequestException("Ссылка недействительна или устарела. Запросите сброс пароля ещё раз");
+		}
+		await this.prisma.$transaction([
+			this.prisma.user.update({
+				where: { id: user.id },
+				data: { passwordHash: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
+			}),
+			this.prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+		]);
 		return { success: true };
 	}
 
@@ -155,11 +225,11 @@ export class AuthService {
 			}
 
 			const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
-			if (!user || !user.isActive) {
+			if (!user || !user.isActive || user.tokenVersion !== (payload.ver ?? 0)) {
 				throw new UnauthorizedException("Пользователь недоступен");
 			}
 
-			return this.issueTokens(user.id, user.email);
+			return this.issueTokens(user);
 		} catch {
 			throw new UnauthorizedException("Недействительный токен");
 		}
@@ -177,9 +247,36 @@ export class AuthService {
 		};
 	}
 
-	private issueTokens(userId: string, email: string) {
-		const accessPayload: JwtPayload = { sub: userId, email, type: "access" };
-		const refreshPayload: JwtPayload = { sub: userId, email, type: "refresh" };
+	/** Сменить пароль: проверяем текущий, отзываем все остальные сессии, текущей выдаём новые токены */
+	async changePassword(actor: AuthUser, currentPassword: string, newPassword: string) {
+		const user = await this.prisma.user.findUnique({ where: { id: actor.id } });
+		if (!user || !user.isActive) throw new UnauthorizedException("Пользователь недоступен");
+		if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+			throw new BadRequestException("Текущий пароль указан неверно");
+		}
+		if (await bcrypt.compare(newPassword, user.passwordHash)) {
+			throw new BadRequestException("Новый пароль совпадает с текущим");
+		}
+		const updated = await this.prisma.user.update({
+			where: { id: user.id },
+			data: { passwordHash: await bcrypt.hash(newPassword, 10), tokenVersion: { increment: 1 } },
+		});
+		return this.issueTokens(updated);
+	}
+
+	/** Выйти на всех устройствах: старые токены перестают работать, текущая сессия продолжается */
+	async logoutEverywhere(actor: AuthUser) {
+		const updated = await this.prisma.user.update({
+			where: { id: actor.id },
+			data: { tokenVersion: { increment: 1 } },
+		});
+		return this.issueTokens(updated);
+	}
+
+	private issueTokens(user: { id: string; email: string; tokenVersion?: number }) {
+		const ver = user.tokenVersion ?? 0;
+		const accessPayload: JwtPayload = { sub: user.id, email: user.email, type: "access", ver };
+		const refreshPayload: JwtPayload = { sub: user.id, email: user.email, type: "refresh", ver };
 
 		return {
 			accessToken: this.jwtService.sign(accessPayload, {

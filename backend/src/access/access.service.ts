@@ -69,9 +69,7 @@ export class AccessService {
 		const rows = grants
 			.filter((grant) => isPermissionCode(grant.code))
 			.map((grant) =>
-				grant.role === SystemRole.ADMIN && grant.code === "SETTINGS_PERMISSIONS"
-					? { ...grant, enabled: true }
-					: grant,
+				grant.role === SystemRole.ADMIN && grant.code === "SETTINGS_PERMISSIONS" ? { ...grant, enabled: true } : grant,
 			);
 		await this.prisma.$transaction(
 			rows.map((grant) =>

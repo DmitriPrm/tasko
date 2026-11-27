@@ -1,12 +1,8 @@
-import {
-	BadRequestException,
-	ConflictException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { ProjectRole, ProjectStatus, SystemRole } from "@prisma/client";
 
 import { AccessService } from "../access/access.service";
+import { removeTaskAttachmentDir } from "../attachments/attachment-storage";
 import { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { AddMemberDto } from "./dto/add-member.dto";
@@ -42,9 +38,7 @@ export class ProjectsService {
 		const where = {
 			...(user.systemRole === SystemRole.ADMIN ? {} : { members: { some: { userId: user.id } } }),
 			...(query.status ? { status: query.status } : { status: { not: ProjectStatus.ARCHIVED } }),
-			...(query.search
-				? { name: { contains: query.search, mode: "insensitive" as const } }
-				: {}),
+			...(query.search ? { name: { contains: query.search, mode: "insensitive" as const } } : {}),
 		};
 
 		const [items, total] = await this.prisma.$transaction([
@@ -110,8 +104,7 @@ export class ProjectsService {
 				status: dto.status,
 				plannedStartAt:
 					dto.plannedStartAt === undefined ? undefined : dto.plannedStartAt ? new Date(dto.plannedStartAt) : null,
-				plannedEndAt:
-					dto.plannedEndAt === undefined ? undefined : dto.plannedEndAt ? new Date(dto.plannedEndAt) : null,
+				plannedEndAt: dto.plannedEndAt === undefined ? undefined : dto.plannedEndAt ? new Date(dto.plannedEndAt) : null,
 			},
 			include: projectInclude,
 		});
@@ -138,7 +131,10 @@ export class ProjectsService {
 	async remove(user: AuthUser, projectId: string) {
 		await this.access.assert(user, "PROJECTS_ARCHIVE");
 		await this.projectAccess.assertCanManage(projectId, user);
+		const tasks = await this.prisma.task.findMany({ where: { projectId }, select: { id: true } });
 		await this.prisma.project.delete({ where: { id: projectId } });
+		// Файлы вложений живут на диске, каскад базы их не трогает
+		for (const task of tasks) removeTaskAttachmentDir(task.id);
 		return { success: true };
 	}
 

@@ -29,10 +29,7 @@ export type TFnWithMethodParams = [
 	transferCallbacks?: ITransferCallbacks,
 ];
 
-export type TFnWithMethod<
-	BodyType extends z.ZodType = z.ZodUnknown,
-	Request extends z.ZodType = z.ZodUnknown,
-> = {
+export type TFnWithMethod<BodyType extends z.ZodType = z.ZodUnknown, Request extends z.ZodType = z.ZodUnknown> = {
 	(...args: TFnWithMethodParams): AxiosPromise<z.infer<BodyType>>;
 	method: IApiMethod<BodyType, Request>;
 };

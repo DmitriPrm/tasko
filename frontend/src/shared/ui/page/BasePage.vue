@@ -21,7 +21,15 @@ const parentRouteName = computed(() => (typeof route.meta.parent === "string" ? 
 
 const canHistoryBack = computed(() => isInAppHistoryPath(historyBackPath.value));
 
-const canGoBack = computed(() => Boolean(parentRouteName.value) || canHistoryBack.value);
+/**
+ * «Назад» — только на вложенных страницах (проект, раздел настроек, чужой профиль).
+ * На разделах из бокового меню его нет, как в Trello, Asana и Jira: туда переходят через меню.
+ */
+const isNested = computed(
+	() => Boolean(parentRouteName.value) || Object.values(route.params).some((value) => Boolean(value)),
+);
+
+const canGoBack = computed(() => Boolean(parentRouteName.value) || (isNested.value && canHistoryBack.value));
 
 const readHistoryBackPath = () => {
 	const back = router.options.history.state.back;
@@ -53,12 +61,11 @@ watch(() => route.fullPath, syncHistoryBack, { immediate: true });
 
 <template>
 	<section class="base-page">
-		<base-flex class="base-page__back" align="center" width="full">
+		<base-flex v-if="canGoBack" class="base-page__back" align="center" width="full">
 			<base-button
 				class="base-page__back-button"
 				text
 				type="primary"
-				:disabled="!canGoBack"
 				:aria-label="translate('common.back')"
 				@click="handleBack"
 			>
@@ -78,13 +85,7 @@ watch(() => route.fullPath, syncHistoryBack, { immediate: true });
 				<p v-if="description" class="base-page__description">{{ description }}</p>
 				<slot name="subtitle" />
 			</div>
-			<base-flex
-				v-if="slots.actions"
-				class="base-page__actions"
-				align="center"
-				justify="flex-end"
-				:gap="0"
-			>
+			<base-flex v-if="slots.actions" class="base-page__actions" align="center" justify="flex-end" :gap="0">
 				<slot name="actions" />
 			</base-flex>
 		</base-flex>

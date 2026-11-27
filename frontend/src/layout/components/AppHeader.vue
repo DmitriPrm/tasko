@@ -17,10 +17,14 @@ const authStore = useAuthStore();
 const layoutStore = useLayoutStore();
 const taskDrawer = useTaskDrawerStore();
 
+// В колокольчике — только последние; все уведомления — на отдельной странице с пагинацией
 const { state: notifications, fetch: fetchNotifications } = useFetch(
 	baseApi.notifications.getNotifications,
-	"data",
-	{ immediate: true },
+	"data.items",
+	{
+		immediate: true,
+		params: { perPage: 8 },
+	},
 );
 
 const { state: unread, fetch: fetchUnread } = useFetch(baseApi.notifications.getUnreadCount, "data", {
@@ -66,12 +70,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
 
 <template>
 	<header class="app-header">
-		<base-flex
-			align="center"
-			:justify="layoutStore.isMobile ? 'space-between' : 'flex-end'"
-			:gap="4"
-			width="full"
-		>
+		<base-flex align="center" :justify="layoutStore.isMobile ? 'space-between' : 'flex-end'" :gap="4" width="full">
 			<base-button
 				v-if="layoutStore.isMobile"
 				class="app-header__menu"
@@ -85,11 +84,11 @@ onBeforeUnmount(() => window.clearInterval(timer));
 			</base-button>
 			<base-flex class="app-header__controls" align="center" :gap="3">
 				<el-popover
-						placement="bottom-end"
-						:width="layoutStore.isMobile ? 280 : 380"
-						trigger="click"
-						@before-enter="handleRefresh"
-					>
+					placement="bottom-end"
+					:width="layoutStore.isMobile ? 280 : 380"
+					trigger="click"
+					@before-enter="handleRefresh"
+				>
 					<template #reference>
 						<el-badge :value="unread?.count || 0" :hidden="!unread?.count">
 							<base-button class="app-header__bell" text :aria-label="translate('nav.notifications')">
@@ -116,6 +115,9 @@ onBeforeUnmount(() => window.clearInterval(timer));
 							<span>{{ item.body }}</span>
 						</button>
 					</div>
+					<router-link class="app-header__all-notices" :to="{ name: 'notifications' }">
+						{{ translate("notifications.showAll") }}
+					</router-link>
 				</el-popover>
 				<base-user-name v-if="authStore.user" class="app-header__user" :user="authStore.user" :size="32" />
 				<base-button
@@ -219,6 +221,18 @@ onBeforeUnmount(() => window.clearInterval(timer));
 		max-height: var(--mt-popup-max-height);
 		margin-top: map.get($spacers, 2);
 		overflow-y: auto;
+	}
+
+	&__all-notices {
+		display: block;
+		margin-top: map.get($spacers, 3);
+		padding-top: map.get($spacers, 3);
+		border-top: 1px solid var(--mt-color-gray-100);
+		color: var(--mt-color-primary);
+		font-size: map.get($font-sizes, 7);
+		font-weight: 600;
+		text-align: center;
+		text-decoration: none;
 	}
 
 	&__notice {

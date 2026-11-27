@@ -88,7 +88,8 @@ describe("UsersService", () => {
 		prisma.user.findUnique.mockResolvedValue(user);
 		prisma.user.update.mockResolvedValue({ ...user, isActive: false });
 
-		const result = await service.update(user, user.id, { isActive: false });
+		const admin = { ...user, id: "admin", systemRole: SystemRole.ADMIN };
+		const result = await service.update(admin, user.id, { isActive: false });
 
 		expect(result.isActive).toBe(false);
 		expect(prisma.user.update).toHaveBeenCalledWith(
@@ -142,5 +143,13 @@ describe("UsersService", () => {
 		prisma.user.findUnique.mockResolvedValue(null);
 
 		await expect(service.update(user, "missing", { isActive: false })).rejects.toBeInstanceOf(NotFoundException);
+	});
+
+	it("does not let anyone, even an administrator, change someone else's avatar", async () => {
+		const admin = { ...user, id: "admin", systemRole: SystemRole.ADMIN };
+		await expect(
+			service.updateAvatar(admin, "u1", { buffer: Buffer.from("x"), mimetype: "image/png" }),
+		).rejects.toThrow("Аватар может изменить только сам пользователь");
+		expect(prisma.user.update).not.toHaveBeenCalled();
 	});
 });

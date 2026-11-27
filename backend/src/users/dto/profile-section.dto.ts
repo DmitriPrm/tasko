@@ -1,11 +1,39 @@
 import { ProfileFieldType } from "@prisma/client";
-import { IsArray, IsEnum, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
+
+/** Иконки разделов профиля — те же коды, что нарисованы в интерфейсе */
+export const SECTION_ICONS = [
+	"award",
+	"star",
+	"briefcase",
+	"book",
+	"code",
+	"phone",
+	"globe",
+	"heart",
+	"user",
+	"flag",
+] as const;
 
 export class ProfileSectionDto {
 	@IsString()
 	@MinLength(1)
 	@MaxLength(80)
 	title: string;
+}
+
+export class UpdateProfileSectionDto {
+	@IsOptional()
+	@IsString()
+	@MinLength(1)
+	@MaxLength(80)
+	title?: string;
+
+	/** null — вернуть автоматический выбор иконки */
+	@IsOptional()
+	@ValidateIf((dto: UpdateProfileSectionDto) => dto.icon !== null)
+	@IsIn(SECTION_ICONS)
+	icon?: string | null;
 }
 
 export class CreateProfileFieldDto {

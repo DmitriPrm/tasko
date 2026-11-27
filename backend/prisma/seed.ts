@@ -223,7 +223,10 @@ async function seedProfile(passwordHash: string) {
 	}
 
 	const users = await prisma.user.findMany();
-	const samples: Record<string, { section: string; fields: { name: string; type: ProfileFieldType; options?: string[]; value: string }[] }[]> = {
+	const samples: Record<
+		string,
+		{ section: string; fields: { name: string; type: ProfileFieldType; options?: string[]; value: string }[] }[]
+	> = {
 		"admin@tasko.local": [
 			{
 				section: "О себе",
@@ -367,7 +370,9 @@ async function seedProfile(passwordHash: string) {
 				description: "Демонстрационная задача для обзора доски и списков.",
 				type: [TaskType.TASK, TaskType.FEATURE, TaskType.BUG, TaskType.RESEARCH][index % 4],
 				priority: [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH, TaskPriority.CRITICAL][index % 4],
-				status: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.DONE, TaskStatus.CANCELLED][index % 5],
+				status: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.DONE, TaskStatus.CANCELLED][
+					index % 5
+				],
 				deadlineAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * (index - 1)),
 				isCompleted: index % 5 === 3,
 			})),

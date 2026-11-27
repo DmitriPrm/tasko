@@ -5,7 +5,7 @@ const emit = defineEmits<{
 	remove: [];
 }>();
 
-const props = defineProps<{
+defineProps<{
 	tag: Tag;
 	closable?: boolean;
 }>();

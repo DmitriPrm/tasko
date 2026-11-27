@@ -28,6 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 		if (!user || !user.isActive) {
 			throw new UnauthorizedException("Пользователь недоступен");
 		}
+		// Сессия отозвана: пароль сменили или нажали «выйти на всех устройствах»
+		if (user.tokenVersion !== (payload.ver ?? 0)) {
+			throw new UnauthorizedException("Сессия завершена, войдите снова");
+		}
 
 		return {
 			id: user.id,
